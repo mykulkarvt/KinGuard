@@ -1,0 +1,16 @@
+{
+  "name": "KinGuard — परिवार की सुरक्षा",
+  "short_name": "KinGuard",
+  "description": "धोखे से बचाव — परिवार के साथ। Scam protection for elders, with family in the loop.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#D8CFC0",
+  "theme_color": "#0F6B5C",
+  "lang": "hi",
+  "icons": [
+    { "src": "/static/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/static/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

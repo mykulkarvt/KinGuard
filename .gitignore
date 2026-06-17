@@ -1,0 +1,15 @@
+# Runtime database (created + seeded automatically on first run)
+kinguard.db
+*.db
+*.db.bak
+
+# Packaged snapshot / build artifacts
+*.zip
+
+# Python
+__pycache__/
+*.pyc
+
+# OS cruft
+.DS_Store
+Thumbs.db

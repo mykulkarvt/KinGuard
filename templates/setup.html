@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KinGuard — सेटअप</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<meta name="theme-color" content="#0F6B5C">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+</head>
+<body>
+<div class="phone">
+  <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">सेटअप · Setup</small></span></span></header>
+  <div class="stage" id="stage"></div>
+  <div class="footnote" id="foot">यह सेटअप परिवार का कोई सदस्य एक बार करता है। (Family does this once.)</div>
+</div>
+
+<script src="/static/rules.js"></script>
+<script>
+// esc() / UI / LANGS / langOf() all come from rules.js
+let conds = new Set();
+let cfg = {};
+let lang = 'hi';
+// If editing an existing pair, its id is in the URL; otherwise this is a new pair.
+let pair = (new URLSearchParams(location.search).get('id')||'').replace(/\D/g,'');
+
+async function init(){
+  try{ const url = pair ? '/api/settings?pair='+encodeURIComponent(pair) : '/api/settings';
+       cfg = await (await fetch(url)).json();
+       (cfg.conditions||[]).forEach(c=>{if(c)conds.add(c);});
+       lang = langOf(cfg); }catch(e){}
+  render();
+}
+
+function condMeta(U){
+  return [
+    {id:'hearing', ic:'🦻', t:U.condHearingT, s:U.condHearingS},
+    {id:'vision',  ic:'👓', t:U.condVisionT,  s:U.condVisionS},
+    {id:'tremor',  ic:'✋', t:U.condTremorT,  s:U.condTremorS},
+    {id:'memory',  ic:'🧠', t:U.condMemoryT,  s:U.condMemoryS}
+  ];
+}
+
+// Pull whatever is currently typed into cfg so a re-render (after toggling a
+// need or switching language) doesn't wipe the user's input.
+function readInputs(){
+  const g=id=>{const el=document.getElementById(id); return el?el.value:undefined;};
+  let v;
+  if((v=g('sn'))!==undefined) cfg.senior_name=v;
+  if((v=g('sp'))!==undefined) cfg.senior_phone=v;
+  if((v=g('fn'))!==undefined) cfg.family_name=v;
+  if((v=g('fp'))!==undefined) cfg.family_phone=v;
+}
+
+function render(){
+  const U = UI[lang] || UI.hi;
+  document.documentElement.lang = lang;
+  document.title = 'KinGuard — ' + U.setupTag;
+  const tag=document.getElementById('tag'); if(tag) tag.textContent=U.setupTag;
+  const foot=document.getElementById('foot'); if(foot) foot.textContent=U.setupFoot;
+
+  let cards='';
+  condMeta(U).forEach(c=>{
+    const on = conds.has(c.id);
+    cards += `<button class="opt sel-card ${on?'selected':''}" onclick="toggle('${c.id}')" aria-pressed="${on}">
+        <span class="ic">${c.ic}</span>
+        <span class="lbl">${c.t}<small>${c.s}</small></span>
+        <span class="tick">${on?'✓':''}</span></button>`;
+  });
+
+  let langs='';
+  LANGS.forEach(l=>{
+    const on = l.id===lang;
+    langs += `<button class="opt sel-card ${on?'selected':''}" onclick="setLang('${l.id}')" aria-pressed="${on}">
+        <span class="lbl">${esc(l.name)}</span>
+        <span class="tick">${on?'✓':''}</span></button>`;
+  });
+
+  document.getElementById('stage').innerHTML = `
+    <div class="lead" style="margin-bottom:14px">${U.whichPhone}</div>
+    <label class="fld">${U.seniorNameLbl}
+      <input id="sn" type="text" value="${esc(cfg.senior_name)}" placeholder="${esc(U.seniorNamePh)}"></label>
+    <label class="fld">${U.seniorPhoneLbl}
+      <input id="sp" type="tel" value="${esc(cfg.senior_phone)}" placeholder="${esc(U.seniorPhonePh)}"></label>
+    <label class="fld">${U.familyNameLbl}
+      <input id="fn" type="text" value="${esc(cfg.family_name)}" placeholder="${esc(U.familyNamePh)}"></label>
+    <label class="fld">${U.familyPhoneLbl}
+      <input id="fp" type="tel" value="${esc(cfg.family_phone)}" placeholder="${esc(U.familyPhonePh)}"></label>
+
+    <div class="divider" style="margin:20px 0 14px">${U.langDivider}</div>
+    <div class="grid">${langs}</div>
+
+    <div class="divider" style="margin:20px 0 14px">${U.needsDivider}</div>
+    <div style="font-size:14px;color:#8a8478;font-weight:600;margin-bottom:12px;text-align:right">
+      ${U.needsHelp}</div>
+    <div class="grid">${cards}</div>
+
+    <button class="listen" style="margin-top:18px" onclick="save()">${U.save}</button>
+    <div id="msg"></div>`;
+}
+
+function toggle(id){ readInputs(); if(conds.has(id))conds.delete(id); else conds.add(id); render(); }
+function setLang(id){ readInputs(); lang=id; render(); }
+
+async function save(){
+  readInputs();
+  const U = UI[lang] || UI.hi;
+  const body = {
+    senior_name: cfg.senior_name || '',
+    senior_phone: cfg.senior_phone || '',
+    family_name: cfg.family_name || '',
+    family_phone: cfg.family_phone || '',
+    conditions: Array.from(conds),
+    lang: lang
+  };
+  try{
+    const res = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const out = await res.json().catch(()=>({}));
+    if(res.status===400){
+      document.getElementById('msg').innerHTML = `<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">बुज़ुर्ग का फ़ोन नंबर ज़रूरी है · Senior's phone number is required (it links the two phones)</div>`;
+      return;
+    }
+    if(!res.ok || !out.pair) throw new Error('save failed');
+    pair = out.pair;
+    cfg = await (await fetch('/api/settings?pair='+encodeURIComponent(pair))).json();
+    lang = langOf(cfg);
+    const V = UI[lang] || UI.hi;
+    const sLink = location.origin+'/senior?id='+pair;
+    // This phone (the one doing setup) becomes the family screen for this pair.
+    try{ localStorage.setItem('pair', pair); localStorage.setItem('role','family'); }catch(e){}
+    // One button to open the family screen here; one link to send to the senior.
+    document.getElementById('msg').innerHTML =
+      `<div class="verdict safe" style="margin-top:16px"><span class="vic">✅</span>
+        <span><div class="vt" style="font-size:22px">${V.setupDone}</div>
+        <div class="vw">
+          <button class="listen" style="margin:14px 0;width:100%" onclick="location.href='/family?id=${pair}'">${V.openMyScreen} ›</button>
+          <div>${V.sendSeniorLink}<br>
+            <a href="${sLink}" style="color:#0A4E43;font-weight:700;word-break:break-all">${sLink}</a></div>
+        </div></span></div>`;
+  }catch(e){
+    document.getElementById('msg').innerHTML = `<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">${U.saveError}</div>`;
+  }
+}
+
+init();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

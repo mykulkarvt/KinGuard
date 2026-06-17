@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KinGuard — अर्जुन का फ़ोन</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<meta name="theme-color" content="#0F6B5C">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+</head>
+<body>
+<div class="phone">
+  <header class="fam"><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">परिवार</small></span></span></header>
+  <div class="stage" id="stage" role="main"></div>
+  <div class="footnote" id="foot">नमूना — परिजन का फ़ोन। <a href="#" onclick="try{localStorage.removeItem('role')}catch(e){};location='/?pick';return false" style="color:#0F6B5C;font-weight:700">↻ बदलें</a></div>
+</div>
+
+<script src="/static/rules.js"></script>
+<script>
+let alertObj=null, aView='lock';
+let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, lang:'hi'};
+// current language's text/rule tables — set in loadCfg() once settings load
+let U=UI.hi, R=RULES.hi;
+
+// This device's pair (which family it belongs to), from the shared ?id= link.
+const PAIR = (function(){
+  let p = new URLSearchParams(location.search).get('id');
+  if(p){ p = p.replace(/\D/g,''); }
+  if(p){ try{ localStorage.setItem('pair', p); }catch(e){} return p; }
+  try{ return localStorage.getItem('pair') || ''; }catch(e){ return ''; }
+})();
+function api(path){ return path + (path.indexOf('?')>=0?'&':'?') + 'pair=' + encodeURIComponent(PAIR); }
+
+function renderNoPair(){
+  document.getElementById('stage').innerHTML =
+    `<div class="lockwrap"><div class="lead" style="margin:24px 0 14px">अपना कोड डालें · Enter your code</div>
+     <label class="fld">बुज़ुर्ग का फ़ोन नंबर · Senior's phone number
+       <input id="pc" type="tel" inputmode="numeric" placeholder="9876543210"></label>
+     <button class="listen" onclick="savePair()">आगे · Continue</button></div>`;
+}
+function savePair(){
+  const v=((document.getElementById('pc')||{}).value||'').replace(/\D/g,'');
+  if(v){ try{localStorage.setItem('pair',v)}catch(e){} location.href='/family?id='+v; }
+}
+
+function fmtTime(ts){const d=new Date(ts*1000);
+  return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+
+async function loadCfg(){
+  try{ cfg={...cfg, ...await (await fetch(api('/api/settings'))).json()}; }catch(e){}
+  const lang=langOf(cfg);
+  U=UI[lang]; R=RULES[lang];
+  document.documentElement.lang=lang;
+  document.title='KinGuard — '+cfg.family_name+U.possPhone;
+  const tag=document.getElementById('tag'); if(tag) tag.textContent=U.famTag;
+  const foot=document.getElementById('foot');
+  if(foot) foot.innerHTML=esc(U.footFamily)+' <a href="#" onclick="try{localStorage.removeItem(\'role\')}catch(e){};location=\'/?pick\';return false" style="color:#0F6B5C;font-weight:700">'+esc(U.change)+'</a>';
+}
+
+// ---- Web Push: let the family be alerted even when this app is closed ----
+let pushReady=false;      // this device has already subscribed + granted permission
+let pushBackend=false;    // the server supports push (false on hosts that block it)
+function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
+
+function urlB64ToUint8(b64){
+  const pad='='.repeat((4-b64.length%4)%4);
+  const s=(b64+pad).replace(/-/g,'+').replace(/_/g,'/');
+  const raw=atob(s); const arr=new Uint8Array(raw.length);
+  for(let i=0;i<raw.length;i++) arr[i]=raw.charCodeAt(i);
+  return arr;
+}
+
+async function refreshPushState(){
+  if(!pushSupported()) return;
+  try{
+    // Only offer push if the server can actually send it (some hosts block it).
+    const info=await (await fetch('/api/vapid')).json();
+    pushBackend = !!info.enabled;
+    const reg=await navigator.serviceWorker.ready;
+    const sub=await reg.pushManager.getSubscription();
+    pushReady = !!sub && Notification.permission==='granted';
+  }catch(e){}
+}
+
+async function enablePush(){
+  const btn=document.getElementById('pushBtn');
+  try{
+    const info=await (await fetch('/api/vapid')).json();
+    if(!info.enabled || !info.public_key){ if(btn) btn.textContent=U.alertsFail; return; }
+    const perm=await Notification.requestPermission();
+    if(perm!=='granted'){ if(btn) btn.textContent=U.alertsBlocked; return; }
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub){
+      sub=await reg.pushManager.subscribe({userVisibleOnly:true,
+        applicationServerKey:urlB64ToUint8(info.public_key)});
+    }
+    await fetch(api('/api/subscribe'),{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify(sub)});
+    pushReady=true; render();
+  }catch(e){ if(btn) btn.textContent=U.alertsFail; }
+}
+
+async function poll(){
+  try{
+    const data=await (await fetch(api('/api/alerts'))).json();
+    if(data.alert){
+      if(!alertObj || alertObj.id!==data.alert.id){
+        alertObj=data.alert; aView='lock'; render();
+        if(navigator.vibrate) navigator.vibrate([400,200,400,200,400]); // always buzz the family
+      }
+    } else if(alertObj && aView!=='resolved'){ alertObj=null; render(); }
+  }catch(e){}
+}
+
+function render(){
+  const s=document.getElementById('stage');
+  if(aView==='detail') s.innerHTML=detailHTML();
+  else if(aView==='resolved') s.innerHTML=resolvedHTML();
+  else s.innerHTML=lockHTML();
+  s.classList.remove('fade');void s.offsetWidth;s.classList.add('fade');
+}
+
+function lockHTML(){
+  const now=fmtTime(Date.now()/1000);
+  const senior=esc(cfg.senior_name);
+  if(!alertObj){
+    return `<div class="lockwrap">
+      <div class="clock"><div class="big">${now}</div><div>${U.today}</div></div>
+      <div class="calm">${U.calmNoAlert}<br>
+        <span style="font-size:14px;font-weight:600">${fmt(U.seniorSafe,{senior})}</span></div>
+      <div style="text-align:center;font-size:13.5px;color:#9a9387;font-weight:600">
+        ${fmt(U.pressHint,{senior})}</div>
+      ${(pushSupported() && pushBackend) ? `<button id="pushBtn" class="listen" style="margin-top:18px" onclick="enablePush()">${pushReady?U.alertsOn:U.enableAlerts}</button>` : ''}
+    </div>`;
+  }
+  return `<div class="lockwrap">
+    <div class="clock"><div class="big">${fmtTime(alertObj.created_at)}</div><div>${U.today}</div></div>
+    <div class="notif" onclick="open_()" role="alert">
+      <div class="row"><span class="tag">${U.important}</span><span class="when">${U.now}</span></div>
+      <div class="ttl">${fmt(U.maybeScam,{senior})}</div>
+      <div class="hint">${U.tapToOpen}</div>
+    </div></div>`;
+}
+function open_(){aView='detail';render();}
+
+function detailHTML(){
+  const r=R[alertObj.rule];
+  const senior=esc(cfg.senior_name);
+  const seniorPhone = cfg.senior_phone || '0000';
+  let coach='';
+  r.coach.forEach((c,i)=>{coach+=`<li><span class="b">${i+1}</span><span>${c}</span></li>`;});
+  return `<div class="who"><div class="av">${esc((cfg.senior_name || '?')[0])}</div>
+      <div><div class="wt">${senior}</div>
+      <div class="ws">${U.pressedHelp} · ${fmtTime(alertObj.created_at)}</div></div></div>
+    <div class="card"><div class="k">${U.theyReported}</div>
+      <div class="reported"><span class="ic" aria-hidden="true">${r.icon}</span><span>${r.label}</span></div>
+      <div class="danger">⚠️ ${r.danger}</div></div>
+    <a class="callbtn" href="tel:${esc(seniorPhone)}"><span aria-hidden="true">📞</span><span>${fmt(U.callSeniorNow,{senior})}</span></a>
+    <div class="coach"><div class="k">${U.whatToSay}</div><ul>${coach}</ul></div>
+    <a class="callbtn sec" href="tel:1930"><span aria-hidden="true">☎️</span><span>${U.report1930}</span></a>
+    <button class="resolve" onclick="resolve_()">${U.resolve}</button>`;
+}
+
+async function resolve_(){
+  try{ await fetch(api('/api/resolve'),{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({id:alertObj.id})}); }catch(e){}
+  aView='resolved'; render();
+}
+
+function resolvedHTML(){
+  const r=R[alertObj.rule];
+  const senior=esc(cfg.senior_name);
+  return `<div class="resolved"><div class="big">✅</div>
+    <div class="rt">${U.resolvedTitle}</div>
+    <div class="rw">${fmt(U.resolvedWhy,{senior})}</div>
+    <div style="background:#fff;border:2px solid #ECE3D2;border-radius:16px;padding:14px 16px;margin-top:18px;width:100%;text-align:right">
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0;flex-direction:row-reverse"><span>${U.report}</span><span style="color:#8a8478;font-weight:600">${r.label.slice(0,18)}…</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0;flex-direction:row-reverse"><span>${U.time}</span><span style="color:#8a8478;font-weight:600">${fmtTime(alertObj.created_at)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0;flex-direction:row-reverse"><span>${U.result}</span><span style="color:#8a8478;font-weight:600">${U.noMoneySent}</span></div>
+    </div>
+    <button class="back" onclick="done_()">${U.done}</button></div>`;
+}
+function done_(){alertObj=null;aView='lock';render();}
+
+(async function(){
+  if(!PAIR){ renderNoPair(); return; }
+  try{ localStorage.setItem('role','family'); }catch(e){}  // so a reopened app returns here
+  await loadCfg(); await refreshPushState(); render(); poll(); setInterval(poll,3000);
+})();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

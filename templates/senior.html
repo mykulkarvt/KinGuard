@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KinGuard — कमला का फ़ोन</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<meta name="theme-color" content="#0F6B5C">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+</head>
+<body>
+<div class="phone">
+  <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">परिवार की सुरक्षा</small></span></span></header>
+  <div class="stage" id="stage" role="main"></div>
+  <div class="footnote" id="foot">नमूना — बुज़ुर्ग का फ़ोन। <a href="#" onclick="try{localStorage.removeItem('role')}catch(e){};location='/?pick';return false" style="color:#0F6B5C;font-weight:700">↻ बदलें</a></div>
+</div>
+
+<script src="/static/rules.js"></script>
+<script>
+let view='home';
+let sendState='ok';   // 'sending' | 'ok' | 'failed' — did the family actually get the alert?
+// defaults; overwritten by onboarding settings
+let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, family_phone:'',
+         big_text:0, high_contrast:0, vibrate:0, auto_speak:0, simple_mode:0, lang:'hi'};
+// current language's text/rule tables — set in init() once settings load
+let U=UI.hi, R=RULES.hi;
+
+// This device's pair (which family it belongs to). Comes from the ?id= in the
+// link the family shared; remembered afterwards so the link is only needed once.
+const PAIR = (function(){
+  let p = new URLSearchParams(location.search).get('id');
+  if(p){ p = p.replace(/\D/g,''); }
+  if(p){ try{ localStorage.setItem('pair', p); }catch(e){} return p; }
+  try{ return localStorage.getItem('pair') || ''; }catch(e){ return ''; }
+})();
+function api(path){ return path + (path.indexOf('?')>=0?'&':'?') + 'pair=' + encodeURIComponent(PAIR); }
+
+// Shown if this phone has never been linked (no ?id= and nothing remembered).
+function renderNoPair(){
+  document.getElementById('stage').innerHTML =
+    `<div class="lead" style="margin-bottom:14px">अपना कोड डालें · Enter your code</div>
+     <label class="fld">बुज़ुर्ग का फ़ोन नंबर · Senior's phone number
+       <input id="pc" type="tel" inputmode="numeric" placeholder="9876543210"></label>
+     <button class="listen" onclick="savePair()">आगे · Continue</button>`;
+}
+function savePair(){
+  const v=((document.getElementById('pc')||{}).value||'').replace(/\D/g,'');
+  if(v){ try{localStorage.setItem('pair',v)}catch(e){} location.href='/senior?id='+v; }
+}
+
+async function init(){
+  if(!PAIR){ renderNoPair(); return; }
+  try{ localStorage.setItem('role','senior'); }catch(e){}  // so a reopened app returns here
+  try{ cfg = {...cfg, ...await (await fetch(api('/api/settings'))).json()}; }catch(e){}
+  const lang=langOf(cfg);
+  U=UI[lang]; R=RULES[lang];
+  document.documentElement.lang=lang;
+  document.title='KinGuard — '+cfg.senior_name+U.possPhone;
+  const tag=document.getElementById('tag'); if(tag) tag.textContent=U.tagline;
+  const foot=document.getElementById('foot');
+  if(foot) foot.innerHTML=esc(U.footSenior)+' <a href="#" onclick="try{localStorage.removeItem(\'role\')}catch(e){};location=\'/?pick\';return false" style="color:#0F6B5C;font-weight:700">'+esc(U.change)+'</a>';
+  if(cfg.big_text)      document.body.classList.add('big-text');
+  if(cfg.high_contrast) document.body.classList.add('high-contrast');
+  if(cfg.simple_mode)   document.body.classList.add('simple-mode');
+  render();
+}
+
+function buzz(){ if(cfg.vibrate && navigator.vibrate) navigator.vibrate([300,150,300]); }
+
+function render(announce){
+  const s=document.getElementById('stage');
+  if(view==='home') s.innerHTML=homeHTML();
+  else if(view==='panic') s.innerHTML=verdictHTML('panic',true);
+  else s.innerHTML=verdictHTML(view,false);
+  s.classList.remove('fade');void s.offsetWidth;s.classList.add('fade');
+  // Only buzz/speak on the first show of a verdict, not on the re-render that
+  // follows the network result — otherwise it would announce twice per tap.
+  if(view!=='home' && announce){ buzz(); if(cfg.auto_speak) speak(view); }
+}
+
+function homeHTML(){
+  let opts='';
+  GRID.forEach(k=>{const r=R[k];
+    opts+=`<button class="opt" onclick="tap('${k}')" aria-label="${r.label}">
+      <span class="ic" aria-hidden="true">${r.icon}</span>
+      <span class="lbl">${r.label}<small>${r.sub}</small></span></button>`;});
+  return `<button class="panic" onclick="tap('panic')" aria-label="${U.panicAria}">
+      <span class="ic" aria-hidden="true">🆘</span>
+      <span class="txt"><span class="t1">${U.panicT1}</span><span class="t2">${U.panicT2}</span></span></button>
+    <div class="divider">${U.orChoose}</div>
+    <div class="lead">${U.whatHappening}</div>
+    <div class="grid">${opts}</div>`;
+}
+
+async function tap(id){
+  view=id; sendState='sending'; render(true);
+  await sendAlert();
+}
+
+// The verdict is already on screen; this just reports whether the family was
+// actually reached, and lets the senior retry if the alert didn't get through.
+async function sendAlert(){
+  try{
+    const res=await fetch(api('/api/alert'),{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({rule:view})});
+    sendState=(res&&res.ok)?'ok':'failed';
+  }catch(e){ sendState='failed'; }
+  render(false);
+}
+async function resend(){ sendState='sending'; render(false); await sendAlert(); }
+
+function verdictHTML(id,isPanic){
+  const r=R[id];
+  const famPhone = cfg.family_phone || '0000';
+  const fam = esc(cfg.family_name);
+  // What we honestly tell the senior about the family alert, based on whether
+  // the POST actually went through. Never claim "sent" while it's failing.
+  let notify, retry='';
+  if(sendState==='sending'){
+    notify=fmt(U.notifySending,{fam});
+  } else if(sendState==='failed'){
+    notify='<span style="color:#C0392B;font-weight:800">⚠️ '+esc(U.notifyFailed)+'</span>';
+    retry='<button class="listen" style="background:#C0392B;color:#fff" onclick="resend()">'+esc(U.resend)+'</button>';
+  } else {
+    notify=fmt(U.notifyOk,{fam});
+  }
+  if(isPanic){
+    return `<div class="verdict safe" role="alert"><span class="vic" aria-hidden="true">🛡️</span>
+        <span><div class="vt">${U.safeTitle}</div>
+        <div class="vw">${notify}</div></span></div>
+      <div class="steps">
+        <div class="step call"><span class="sic" aria-hidden="true">📞</span><span class="stx">${fmt(U.callFam,{fam})}</span></div>
+        <div class="step"><span class="sic" aria-hidden="true">📵</span><span class="stx">${U.hangup}</span></div>
+        <div class="step"><span class="sic" aria-hidden="true">🚫</span><span class="stx">${U.noMoney}</span></div>
+      </div>
+      <a class="callbtn" href="tel:${esc(famPhone)}"><span aria-hidden="true">📞</span><span>${fmt(U.callFam,{fam})}</span></a>
+      ${retry}
+      <button class="listen" id="listenBtn" onclick="speak('${id}')">${U.listen}</button>
+      <button class="back" onclick="goHome()">${U.back}</button>`;
+  }
+  return `<div class="verdict" role="alert"><span class="vic" aria-hidden="true">🛑</span>
+      <span><div class="vt">${U.fraudTitle}</div><div class="vw">${r.why}</div></span></div>
+    <div class="steps">
+      <div class="step"><span class="sic" aria-hidden="true">📵</span><span class="stx">${U.hangup}</span></div>
+      <div class="step"><span class="sic" aria-hidden="true">🚫</span><span class="stx">${U.noMoney}</span></div>
+      <div class="step alert"><span class="sic" aria-hidden="true">👨‍👩‍👦</span><span class="stx">${notify}</span></div>
+    </div>
+    ${retry}
+    <button class="listen" id="listenBtn" onclick="speak('${id}')">${U.listen}</button>
+    <a class="callbtn sec" href="tel:1930"><span aria-hidden="true">☎️</span><span>${U.help1930}</span></a>
+    <button class="back" onclick="goHome()">${U.back}</button>`;
+}
+function goHome(){view='home';render();}
+
+function speak(id){
+  if(!('speechSynthesis' in window))return;
+  speechSynthesis.cancel();
+  let text;
+  if(id==='panic') text=fmt(U.speakPanic,{fam:cfg.family_name});
+  else text=U.fraudTitle+' '+R[id].why+' '+U.scamTail;
+  const u=new SpeechSynthesisUtterance(text);u.lang=LANG_TTS[langOf(cfg)]||'hi-IN';u.rate=0.9;
+  const btn=document.getElementById('listenBtn');
+  u.onstart=()=>{if(btn){btn.classList.add('speaking');btn.textContent=U.speaking;}};
+  u.onend=()=>{if(btn){btn.classList.remove('speaking');btn.textContent=U.listen;}};
+  speechSynthesis.speak(u);
+}
+
+init();
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
+</body>
+</html>

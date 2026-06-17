@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KinGuard — परिवार की सुरक्षा</title>
+<meta name="theme-color" content="#0F6B5C">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="chooser">
+  <h1>🛡️ KinGuard</h1>
+  <div style="font-size:18px;font-weight:700;color:var(--teal);margin-bottom:18px">परिवार की सुरक्षा</div>
+  <p id="lead">यह फ़ोन किसका है? · Who is this phone for?</p>
+  <div id="opts">
+    <a class="s" href="#" onclick="pick('senior')">👵 बुज़ुर्ग का फ़ोन<br><small style="opacity:.85;font-weight:600">This is the senior's phone</small></a>
+    <a class="f" href="#" onclick="pick('family')">👨 परिवार का फ़ोन<br><small style="opacity:.85;font-weight:600">This is the family member's phone</small></a>
+    <a href="/setup" style="background:#fff;color:#0A4E43;border:2px solid #0F6B5C">⚙️ सेटअप · Setup (पहले करें)</a>
+  </div>
+  <small>एक बार चुनें — फ़ोन इसे याद रखेगा। (Chosen once, then remembered.)</small>
+</div>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+}
+function pick(role){
+  try{ localStorage.setItem('role', role); }catch(e){}
+  location.href = role === 'senior' ? '/senior' : '/family';
+  return false;
+}
+// If this phone already chose a role, go straight there (unless ?pick to re-choose)
+try{
+  const saved = localStorage.getItem('role');
+  if (saved && !location.search.includes('pick')) {
+    location.replace(saved === 'senior' ? '/senior' : '/family');
+  }
+}catch(e){}
+</script>
+</body>
+</html>
