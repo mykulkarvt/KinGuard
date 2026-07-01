@@ -6,9 +6,13 @@
 // as the rest of the app.
 importScripts('/static/rules.js');
 
-const CACHE = 'kinguard-v4';   // bump when cached assets (rules.js, templates) change
+const CACHE = 'kinguard-v11';  // bump when cached assets (rules.js, templates) change
+// NOTE: '/', '/family' and '/setup' are intentionally NOT pre-cached — they are
+// server redirects (to /login or the family screen depending on auth), and
+// caching a redirected response would break the install. They are still handled
+// live by the network-first fetch handler below.
 const ASSETS = [
-  '/', '/senior', '/family', '/setup',
+  '/senior', '/login',
   '/static/style.css', '/static/rules.js', '/static/manifest.json',
   '/static/icon-192.png', '/static/icon-512.png'
 ];
@@ -31,7 +35,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) {}
-  const lang = (typeof langOf === 'function') ? langOf({ lang: d.lang }) : 'hi';
+  const lang = (typeof langOf === 'function') ? langOf({ lang: d.lang }) : 'en';
   const U = (typeof UI !== 'undefined' && UI[lang]) ? UI[lang] : null;
   const R = (typeof RULES !== 'undefined' && RULES[lang]) ? RULES[lang] : null;
   const senior = d.senior || '';
@@ -66,10 +70,18 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   // Live data (alerts, settings) must always hit the network — never cache it.
   if (url.pathname.startsWith('/api/')) return;
-  // Everything else: serve from cache, fall back to network.
+  // Network-first: when online, always load the latest file (so edits show up on
+  // a normal reload) and refresh the cached copy; fall back to cache only when
+  // the network is unavailable. Keeps the app working offline without ever
+  // serving a stale page while online.
   e.respondWith(
-    caches.match(e.request).then(
-      (cached) => cached || fetch(e.request).catch(() => caches.match('/'))
-    )
+    fetch(e.request).then((resp) => {
+      // Cache same-origin, non-redirected successful responses for offline use.
+      if (resp && resp.ok && resp.type === 'basic' && !resp.redirected) {
+        const copy = resp.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+      }
+      return resp;
+    }).catch(() => caches.match(e.request).then((c) => c || caches.match('/setup')))
   );
 });

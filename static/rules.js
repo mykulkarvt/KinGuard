@@ -476,10 +476,10 @@ const LANGS = [
 const LANG_TTS = { hi: 'hi-IN', te: 'te-IN', en: 'en-IN' };
 
 // Resolve a possibly-unknown language to one we actually have, falling back to
-// Hindi. Use everywhere a cfg.lang is read.
+// English. Use everywhere a cfg.lang is read.
 function langOf(cfg){
   const l = cfg && cfg.lang;
-  return (l && UI[l] && RULES[l]) ? l : 'hi';
+  return (l && UI[l] && RULES[l]) ? l : 'en';
 }
 
 // names — defaults until onboarding overwrites them

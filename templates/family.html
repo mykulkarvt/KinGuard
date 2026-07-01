@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>KinGuard — अर्जुन का फ़ोन</title>
+<meta name="csrf-token" content="{{ csrf }}">
+<title>KinGuard — Family phone</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
@@ -13,51 +14,51 @@
 </head>
 <body>
 <div class="phone">
-  <header class="fam"><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">परिवार</small></span></span></header>
+  <header class="fam"><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">Family</small></span></span><a href="#" onclick="logout();return false" style="margin-left:auto;color:#fff;opacity:.85;font-weight:700;font-size:13px">Log out</a></header>
   <div class="stage" id="stage" role="main"></div>
-  <div class="footnote" id="foot">नमूना — परिजन का फ़ोन। <a href="#" onclick="try{localStorage.removeItem('role')}catch(e){};location='/?pick';return false" style="color:#0F6B5C;font-weight:700">↻ बदलें</a></div>
+  <div class="footnote" id="foot">Sample — the family member's phone.</div>
 </div>
 
 <script src="/static/rules.js"></script>
 <script>
 let alertObj=null, aView='lock';
-let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, lang:'hi'};
+let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, lang:'en'};
 // current language's text/rule tables — set in loadCfg() once settings load
-let U=UI.hi, R=RULES.hi;
+let U=UI.en, R=RULES.en;
 
-// This device's pair (which family it belongs to), from the shared ?id= link.
-const PAIR = (function(){
-  let p = new URLSearchParams(location.search).get('id');
-  if(p){ p = p.replace(/\D/g,''); }
-  if(p){ try{ localStorage.setItem('pair', p); }catch(e){} return p; }
-  try{ return localStorage.getItem('pair') || ''; }catch(e){ return ''; }
-})();
+// This account's pair + CSRF token are loaded from /api/me at boot. CSRF is
+// seeded from the page so it's available even before that call returns.
+let PAIR='';
+let CSRF=(document.querySelector('meta[name="csrf-token"]')||{}).content||'';
 function api(path){ return path + (path.indexOf('?')>=0?'&':'?') + 'pair=' + encodeURIComponent(PAIR); }
+function logout(){ fetch('/api/logout',{method:'POST',headers:{'X-CSRF-Token':CSRF}}).finally(()=>{location.href='/login';}); }
 
+// The family member is the one who configures the pair, so an unlinked family
+// phone is sent to Setup (which mints the secret token and the senior's link).
 function renderNoPair(){
   document.getElementById('stage').innerHTML =
-    `<div class="lockwrap"><div class="lead" style="margin:24px 0 14px">अपना कोड डालें · Enter your code</div>
-     <label class="fld">बुज़ुर्ग का फ़ोन नंबर · Senior's phone number
-       <input id="pc" type="tel" inputmode="numeric" placeholder="9876543210"></label>
-     <button class="listen" onclick="savePair()">आगे · Continue</button></div>`;
-}
-function savePair(){
-  const v=((document.getElementById('pc')||{}).value||'').replace(/\D/g,'');
-  if(v){ try{localStorage.setItem('pair',v)}catch(e){} location.href='/family?id='+v; }
+    `<div class="lockwrap"><div class="verdict safe" role="alert"><span class="vic" aria-hidden="true">⚙️</span>
+      <span><div class="vt">Finish setup first</div>
+      <div class="vw">Set up KinGuard on the Setup page. This phone then becomes your family screen, and you'll get a private link to send to the senior.</div></span></div>
+     <button class="listen" style="margin-top:16px" onclick="location.href='/setup'">Go to Setup ›</button></div>`;
 }
 
 function fmtTime(ts){const d=new Date(ts*1000);
   return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
 
 async function loadCfg(){
-  try{ cfg={...cfg, ...await (await fetch(api('/api/settings'))).json()}; }catch(e){}
+  try{
+    const r=await fetch(api('/api/settings'));
+    if(r.status===401){ location.href='/login'; return; }
+    cfg={...cfg, ...await r.json()};
+  }catch(e){}
   const lang=langOf(cfg);
   U=UI[lang]; R=RULES[lang];
   document.documentElement.lang=lang;
-  document.title='KinGuard — '+cfg.family_name+U.possPhone;
+  document.title='KinGuard — '+(cfg.family_name||'')+U.possPhone;
   const tag=document.getElementById('tag'); if(tag) tag.textContent=U.famTag;
   const foot=document.getElementById('foot');
-  if(foot) foot.innerHTML=esc(U.footFamily)+' <a href="#" onclick="try{localStorage.removeItem(\'role\')}catch(e){};location=\'/?pick\';return false" style="color:#0F6B5C;font-weight:700">'+esc(U.change)+'</a>';
+  if(foot) foot.innerHTML=esc(U.footFamily)+' · <a href="/setup?id='+encodeURIComponent(PAIR)+'" style="color:#0F6B5C;font-weight:700">⚙ Edit</a> · <a href="#" onclick="logout();return false" style="color:#0F6B5C;font-weight:700">Log out</a>';
 }
 
 // ---- Web Push: let the family be alerted even when this app is closed ----
@@ -98,7 +99,7 @@ async function enablePush(){
       sub=await reg.pushManager.subscribe({userVisibleOnly:true,
         applicationServerKey:urlB64ToUint8(info.public_key)});
     }
-    await fetch(api('/api/subscribe'),{method:'POST',headers:{'Content-Type':'application/json'},
+    await fetch(api('/api/subscribe'),{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},
       body:JSON.stringify(sub)});
     pushReady=true; render();
   }catch(e){ if(btn) btn.textContent=U.alertsFail; }
@@ -106,7 +107,9 @@ async function enablePush(){
 
 async function poll(){
   try{
-    const data=await (await fetch(api('/api/alerts'))).json();
+    const r=await fetch(api('/api/alerts'));
+    if(r.status===401){ location.href='/login'; return; }
+    const data=await r.json();
     if(data.alert){
       if(!alertObj || alertObj.id!==data.alert.id){
         alertObj=data.alert; aView='lock'; render();
@@ -166,8 +169,8 @@ function detailHTML(){
 }
 
 async function resolve_(){
-  try{ await fetch(api('/api/resolve'),{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({id:alertObj.id})}); }catch(e){}
+  try{ const r=await fetch(api('/api/resolve'),{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},
+        body:JSON.stringify({id:alertObj.id})}); if(r.status===401){ location.href='/login'; return; } }catch(e){}
   aView='resolved'; render();
 }
 
@@ -187,8 +190,15 @@ function resolvedHTML(){
 function done_(){alertObj=null;aView='lock';render();}
 
 (async function(){
+  // Who am I, and which pair do I own? (also refreshes the CSRF token)
+  try{
+    const r=await fetch('/api/me');
+    if(r.status===401){ location.href='/login'; return; }
+    const me=await r.json();
+    CSRF=me.csrf||CSRF;
+    if(me.pairs && me.pairs.length){ PAIR=me.pairs[0].pair; }
+  }catch(e){}
   if(!PAIR){ renderNoPair(); return; }
-  try{ localStorage.setItem('role','family'); }catch(e){}  // so a reopened app returns here
   await loadCfg(); await refreshPushState(); render(); poll(); setInterval(poll,3000);
 })();
 </script>

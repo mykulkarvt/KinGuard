@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KinGuard — Log in</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/style.css">
+<meta name="theme-color" content="#0F6B5C">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+</head>
+<body>
+<div class="phone">
+  <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small style="opacity:.85">Log in</small></span></span></header>
+  <div class="stage">
+    <div class="lead" style="margin-bottom:14px">Family log in</div>
+    <label class="fld">Email
+      <input id="email" type="email" autocomplete="username" placeholder="you@example.com"></label>
+    <label class="fld">Password
+      <input id="pw" type="password" autocomplete="current-password" placeholder="Your password"></label>
+    <button class="listen" style="margin-top:8px" onclick="doLogin()">Log in</button>
+    <div id="msg"></div>
+    <div style="text-align:center;margin-top:18px;font-weight:600;color:#8a8478">
+      New to KinGuard? <a href="/register" style="color:#0A4E43;font-weight:800">Create an account</a></div>
+  </div>
+  <div class="footnote">Only a family member logs in — the senior never needs to.</div>
+</div>
+<script>
+function nextUrl(){ const n=new URLSearchParams(location.search).get('next'); return (n && n.startsWith('/') && !n.startsWith('//')) ? n : '/family'; }
+function err(t){ document.getElementById('msg').innerHTML='<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">'+t+'</div>'; }
+async function doLogin(){
+  const email=(document.getElementById('email').value||'').trim();
+  const password=document.getElementById('pw').value||'';
+  document.getElementById('msg').textContent='';
+  try{
+    const r=await fetch('/api/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok){ location.href=nextUrl(); return; }
+    err(j.error||'Could not log in.');
+  }catch(e){ err('Network error — please try again.'); }
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
+</script>
+</body>
+</html>

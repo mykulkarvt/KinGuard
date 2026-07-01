@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>KinGuard — सेटअप</title>
+<meta name="csrf-token" content="{{ csrf }}">
+<title>KinGuard — Setup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
@@ -13,9 +14,9 @@
 </head>
 <body>
 <div class="phone">
-  <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">सेटअप · Setup</small></span></span></header>
+  <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">Setup</small></span></span><a href="#" onclick="logout();return false" style="margin-left:auto;color:#fff;opacity:.85;font-weight:700;font-size:13px">Log out</a></header>
   <div class="stage" id="stage"></div>
-  <div class="footnote" id="foot">यह सेटअप परिवार का कोई सदस्य एक बार करता है। (Family does this once.)</div>
+  <div class="footnote" id="foot">A family member does this setup once.</div>
 </div>
 
 <script src="/static/rules.js"></script>
@@ -23,9 +24,9 @@
 // esc() / UI / LANGS / langOf() all come from rules.js
 let conds = new Set();
 let cfg = {};
-let lang = 'hi';
-// If editing an existing pair, its id is in the URL; otherwise this is a new pair.
-let pair = (new URLSearchParams(location.search).get('id')||'').replace(/\D/g,'');
+let lang = 'en';
+// If editing an existing pair, its token is in the URL; otherwise this is a new pair.
+let pair = (new URLSearchParams(location.search).get('id')||'').replace(/[^A-Za-z0-9_-]/g,'');
 
 async function init(){
   try{ const url = pair ? '/api/settings?pair='+encodeURIComponent(pair) : '/api/settings';
@@ -80,7 +81,10 @@ function render(){
   });
 
   document.getElementById('stage').innerHTML = `
-    <div class="lead" style="margin-bottom:14px">${U.whichPhone}</div>
+    <div class="divider" style="margin:4px 0 14px">${U.langDivider}</div>
+    <div class="grid">${langs}</div>
+
+    <div class="lead" style="margin:22px 0 14px">${U.whichPhone}</div>
     <label class="fld">${U.seniorNameLbl}
       <input id="sn" type="text" value="${esc(cfg.senior_name)}" placeholder="${esc(U.seniorNamePh)}"></label>
     <label class="fld">${U.seniorPhoneLbl}
@@ -89,9 +93,6 @@ function render(){
       <input id="fn" type="text" value="${esc(cfg.family_name)}" placeholder="${esc(U.familyNamePh)}"></label>
     <label class="fld">${U.familyPhoneLbl}
       <input id="fp" type="tel" value="${esc(cfg.family_phone)}" placeholder="${esc(U.familyPhonePh)}"></label>
-
-    <div class="divider" style="margin:20px 0 14px">${U.langDivider}</div>
-    <div class="grid">${langs}</div>
 
     <div class="divider" style="margin:20px 0 14px">${U.needsDivider}</div>
     <div style="font-size:14px;color:#8a8478;font-weight:600;margin-bottom:12px;text-align:right">
@@ -105,10 +106,52 @@ function render(){
 function toggle(id){ readInputs(); if(conds.has(id))conds.delete(id); else conds.add(id); render(); }
 function setLang(id){ readInputs(); lang=id; render(); }
 
+function csrfHeader(){ const m=document.querySelector('meta[name="csrf-token"]'); return m?m.getAttribute('content'):''; }
+
+async function logout(){
+  try{ await fetch('/api/logout',{method:'POST',headers:{'X-CSRF-Token':csrfHeader()}}); }catch(e){}
+  location.href='/login';
+}
+
+// The senior's link now carries a secret device token (not the phone number).
+// We can only show it right after it's minted; on later edits it already exists,
+// so we offer a "get a new link" (which revokes the old one).
+function successHTML(V, token){
+  const openBtn = `<button class="listen" style="margin:14px 0;width:100%" onclick="location.href='/family'">${V.openMyScreen} ›</button>`;
+  let linkBlock;
+  if(token){
+    const sLink = location.origin+'/senior?t='+token;
+    linkBlock = `<div>${V.sendSeniorLink}<br>
+      <a href="${sLink}" style="color:#0A4E43;font-weight:700;word-break:break-all">${sLink}</a></div>`;
+  } else {
+    linkBlock = `<div>The senior's link is already active on their phone. Lost it, or want a fresh one?
+      <button class="listen" style="margin-top:10px;width:100%;background:#8a8478" onclick="regenLink()">Get a new senior link</button></div>`;
+  }
+  return `<div class="verdict safe" style="margin-top:16px"><span class="vic">✅</span>
+    <span><div class="vt" style="font-size:22px">${V.setupDone}</div>
+    <div class="vw" id="doneVw">${openBtn}${linkBlock}</div></span></div>`;
+}
+
+async function regenLink(){
+  try{
+    const r = await fetch('/api/senior-link',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfHeader()},body:JSON.stringify({pair:pair})});
+    if(r.status===401){ location.href='/login'; return; }
+    const j = await r.json().catch(()=>({}));
+    if(j.senior_token){
+      const sLink = location.origin+'/senior?t='+j.senior_token;
+      document.getElementById('doneVw').innerHTML =
+        `<button class="listen" style="margin:14px 0;width:100%" onclick="location.href='/family'">Open my screen ›</button>
+         <div>Send this new link to the senior — the old link stops working:<br>
+         <a href="${sLink}" style="color:#0A4E43;font-weight:700;word-break:break-all">${sLink}</a></div>`;
+    }
+  }catch(e){}
+}
+
 async function save(){
   readInputs();
-  const U = UI[lang] || UI.hi;
+  const U = UI[lang] || UI.en;
   const body = {
+    pair: pair,                       // existing token when editing; '' creates a new one
     senior_name: cfg.senior_name || '',
     senior_phone: cfg.senior_phone || '',
     family_name: cfg.family_name || '',
@@ -117,29 +160,17 @@ async function save(){
     lang: lang
   };
   try{
-    const res = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const res = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfHeader()},body:JSON.stringify(body)});
+    if(res.status===401){ location.href='/login'; return; }
     const out = await res.json().catch(()=>({}));
     if(res.status===400){
-      document.getElementById('msg').innerHTML = `<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">बुज़ुर्ग का फ़ोन नंबर ज़रूरी है · Senior's phone number is required (it links the two phones)</div>`;
+      document.getElementById('msg').innerHTML = `<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">Senior's phone number is required — it links the two phones.</div>`;
       return;
     }
     if(!res.ok || !out.pair) throw new Error('save failed');
     pair = out.pair;
-    cfg = await (await fetch('/api/settings?pair='+encodeURIComponent(pair))).json();
-    lang = langOf(cfg);
-    const V = UI[lang] || UI.hi;
-    const sLink = location.origin+'/senior?id='+pair;
-    // This phone (the one doing setup) becomes the family screen for this pair.
-    try{ localStorage.setItem('pair', pair); localStorage.setItem('role','family'); }catch(e){}
-    // One button to open the family screen here; one link to send to the senior.
-    document.getElementById('msg').innerHTML =
-      `<div class="verdict safe" style="margin-top:16px"><span class="vic">✅</span>
-        <span><div class="vt" style="font-size:22px">${V.setupDone}</div>
-        <div class="vw">
-          <button class="listen" style="margin:14px 0;width:100%" onclick="location.href='/family?id=${pair}'">${V.openMyScreen} ›</button>
-          <div>${V.sendSeniorLink}<br>
-            <a href="${sLink}" style="color:#0A4E43;font-weight:700;word-break:break-all">${sLink}</a></div>
-        </div></span></div>`;
+    const V = UI[lang] || UI.en;
+    document.getElementById('msg').innerHTML = successHTML(V, out.senior_token);
   }catch(e){
     document.getElementById('msg').innerHTML = `<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">${U.saveError}</div>`;
   }

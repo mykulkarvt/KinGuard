@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>KinGuard — कमला का फ़ोन</title>
+<title>KinGuard — Senior's phone</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
@@ -13,9 +13,9 @@
 </head>
 <body>
 <div class="phone">
-  <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">परिवार की सुरक्षा</small></span></span></header>
+  <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small id="tag" style="opacity:.85">Family safety</small></span></span></header>
   <div class="stage" id="stage" role="main"></div>
-  <div class="footnote" id="foot">नमूना — बुज़ुर्ग का फ़ोन। <a href="#" onclick="try{localStorage.removeItem('role')}catch(e){};location='/?pick';return false" style="color:#0F6B5C;font-weight:700">↻ बदलें</a></div>
+  <div class="footnote" id="foot">Sample — the elder's phone.</div>
 </div>
 
 <script src="/static/rules.js"></script>
@@ -24,44 +24,37 @@ let view='home';
 let sendState='ok';   // 'sending' | 'ok' | 'failed' — did the family actually get the alert?
 // defaults; overwritten by onboarding settings
 let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, family_phone:'',
-         big_text:0, high_contrast:0, vibrate:0, auto_speak:0, simple_mode:0, lang:'hi'};
+         big_text:0, high_contrast:0, vibrate:0, auto_speak:0, simple_mode:0, lang:'en'};
 // current language's text/rule tables — set in init() once settings load
-let U=UI.hi, R=RULES.hi;
+let U=UI.en, R=RULES.en;
 
-// This device's pair (which family it belongs to). Comes from the ?id= in the
-// link the family shared; remembered afterwards so the link is only needed once.
-const PAIR = (function(){
-  let p = new URLSearchParams(location.search).get('id');
-  if(p){ p = p.replace(/\D/g,''); }
-  if(p){ try{ localStorage.setItem('pair', p); }catch(e){} return p; }
-  try{ return localStorage.getItem('pair') || ''; }catch(e){ return ''; }
-})();
-function api(path){ return path + (path.indexOf('?')>=0?'&':'?') + 'pair=' + encodeURIComponent(PAIR); }
+// This phone is linked by a secret device token kept in an HttpOnly cookie, set
+// when the family's private /senior?t=... link was opened. Nothing identifying
+// lives in the page or the URL; requests are authenticated by that cookie.
+function api(path){ return path; }
 
-// Shown if this phone has never been linked (no ?id= and nothing remembered).
+// Shown if this phone has never been linked (no valid device cookie). The phones
+// link through the private one-time link the family sends — nothing to type.
 function renderNoPair(){
   document.getElementById('stage').innerHTML =
-    `<div class="lead" style="margin-bottom:14px">अपना कोड डालें · Enter your code</div>
-     <label class="fld">बुज़ुर्ग का फ़ोन नंबर · Senior's phone number
-       <input id="pc" type="tel" inputmode="numeric" placeholder="9876543210"></label>
-     <button class="listen" onclick="savePair()">आगे · Continue</button>`;
-}
-function savePair(){
-  const v=((document.getElementById('pc')||{}).value||'').replace(/\D/g,'');
-  if(v){ try{localStorage.setItem('pair',v)}catch(e){} location.href='/senior?id='+v; }
+    `<div class="verdict safe" role="alert"><span class="vic" aria-hidden="true">🔗</span>
+      <span><div class="vt">Open your KinGuard link</div>
+      <div class="vw">Ask your family for the link they set up for you, and open it on this phone. It connects the two phones securely.</div></span></div>`;
 }
 
 async function init(){
-  if(!PAIR){ renderNoPair(); return; }
-  try{ localStorage.setItem('role','senior'); }catch(e){}  // so a reopened app returns here
-  try{ cfg = {...cfg, ...await (await fetch(api('/api/settings'))).json()}; }catch(e){}
+  let linked=false;
+  try{
+    const res=await fetch('/api/senior');
+    if(res.ok){ cfg={...cfg, ...await res.json()}; linked=true; }
+  }catch(e){}
+  if(!linked){ renderNoPair(); return; }
   const lang=langOf(cfg);
   U=UI[lang]; R=RULES[lang];
   document.documentElement.lang=lang;
-  document.title='KinGuard — '+cfg.senior_name+U.possPhone;
+  document.title='KinGuard — '+(cfg.senior_name||'')+U.possPhone;
   const tag=document.getElementById('tag'); if(tag) tag.textContent=U.tagline;
-  const foot=document.getElementById('foot');
-  if(foot) foot.innerHTML=esc(U.footSenior)+' <a href="#" onclick="try{localStorage.removeItem(\'role\')}catch(e){};location=\'/?pick\';return false" style="color:#0F6B5C;font-weight:700">'+esc(U.change)+'</a>';
+  const foot=document.getElementById('foot'); if(foot) foot.textContent=U.footSenior;
   if(cfg.big_text)      document.body.classList.add('big-text');
   if(cfg.high_contrast) document.body.classList.add('high-contrast');
   if(cfg.simple_mode)   document.body.classList.add('simple-mode');
