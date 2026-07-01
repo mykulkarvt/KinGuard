@@ -165,11 +165,9 @@ body.high-contrast .step .stx{color:#000;}
 body.high-contrast a.callbtn{background:#000;}
 body.high-contrast .footnote{color:#000;border-color:#000;}
 
-/* Simple mode — for memory / confusion: only the big panic button */
-body.simple-mode .divider,
-body.simple-mode .lead,
-body.simple-mode .grid{display:none !important;}
-body.simple-mode .panic{margin-bottom:0;padding:44px 24px;}
+/* Simple mode — for memory / confusion: emphasise the big panic button, but
+   keep the scam-type options visible below it. */
+body.simple-mode .panic{padding:44px 24px;}
 body.simple-mode .panic .ic{font-size:60px;}
 body.simple-mode .panic .t1{font-size:32px;}
 body.simple-mode .panic .t2{font-size:19px;}
