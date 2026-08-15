@@ -180,10 +180,10 @@ function resolvedHTML(){
   return `<div class="resolved"><div class="big">✅</div>
     <div class="rt">${U.resolvedTitle}</div>
     <div class="rw">${fmt(U.resolvedWhy,{senior})}</div>
-    <div style="background:#fff;border:2px solid #ECE3D2;border-radius:16px;padding:14px 16px;margin-top:18px;width:100%;text-align:right">
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0;flex-direction:row-reverse"><span>${U.report}</span><span style="color:#8a8478;font-weight:600">${r.label.slice(0,18)}…</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0;flex-direction:row-reverse"><span>${U.time}</span><span style="color:#8a8478;font-weight:600">${fmtTime(alertObj.created_at)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0;flex-direction:row-reverse"><span>${U.result}</span><span style="color:#8a8478;font-weight:600">${U.noMoneySent}</span></div>
+    <div style="background:#fff;border:2px solid #ECE3D2;border-radius:16px;padding:14px 16px;margin-top:18px;width:100%;text-align:left">
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.report}</span><span style="color:#8a8478;font-weight:600">${r.label.slice(0,18)}…</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.time}</span><span style="color:#8a8478;font-weight:600">${fmtTime(alertObj.created_at)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.result}</span><span style="color:#8a8478;font-weight:600">${U.noMoneySent}</span></div>
     </div>
     <button class="back" onclick="done_()">${U.done}</button></div>`;
 }
