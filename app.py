@@ -347,11 +347,24 @@ LOGIN_MAX = 8          # failed attempts per window per client
 
 
 def _client_key():
+    """Who to charge a rate-limited attempt to.
+
+    X-Real-IP is what PythonAnywhere's load balancer sets to the address it
+    actually received the request from, overwriting anything the caller sent, so
+    it is the only value here that cannot be forged. X-Forwarded-For is a
+    fallback for other hosts and is client-supplied: its FIRST entry is the
+    claimed client. Never key on the last entry — that is the proxy itself, so
+    every visitor would share one bucket and a single attacker could lock out
+    the whole site.
+    """
+    real = request.headers.get("X-Real-IP", "").strip()
+    if real:
+        return real
     fwd = request.headers.get("X-Forwarded-For", "")
     return (fwd.split(",")[0].strip() or request.remote_addr or "?")
 
 
-def login_allowed(key):
+def rate_allowed(key):
     now = time.time()
     with _login_lock:
         hits = [t for t in _login_hits.get(key, []) if now - t < LOGIN_WINDOW]
@@ -359,7 +372,7 @@ def login_allowed(key):
         return len(hits) < LOGIN_MAX
 
 
-def login_record_fail(key):
+def rate_record(key):
     with _login_lock:
         _login_hits.setdefault(key, []).append(time.time())
 
@@ -577,6 +590,16 @@ def delete_account_info():
 # ---------- auth API ----------
 @app.route("/api/register", methods=["POST"])
 def api_register():
+    # Rate-limited on the same budget as login, otherwise this route can be
+    # scripted to mass-create accounts and bloat the database.
+    #
+    # The attempt is recorded even when registration SUCCEEDS. That is the whole
+    # point here: the abuse to stop is bulk account creation, where every request
+    # works, so a failure-only counter would never fire once.
+    key = _client_key()
+    if not rate_allowed(key):
+        return jsonify(error="Too many attempts. Please wait a few minutes."), 429
+    rate_record(key)
     data = request.get_json(force=True, silent=True) or {}
     email = _norm_email(data.get("email"))
     pw = data.get("password") or ""
@@ -598,7 +621,7 @@ def api_register():
 @app.route("/api/login", methods=["POST"])
 def api_login():
     key = _client_key()
-    if not login_allowed(key):
+    if not rate_allowed(key):
         return jsonify(error="Too many attempts. Please wait a few minutes."), 429
     data = request.get_json(force=True, silent=True) or {}
     email = _norm_email(data.get("email"))
@@ -606,7 +629,7 @@ def api_login():
     with closing(get_db()) as con:
         row = con.execute("SELECT * FROM accounts WHERE email=?", (email,)).fetchone()
     if row is None or not check_password_hash(row["password_hash"], pw):
-        login_record_fail(key)
+        rate_record(key)
         return jsonify(error="Wrong email or password."), 401
     _start_session(row["id"], row["session_version"])
     return jsonify(ok=True)
@@ -647,11 +670,11 @@ def api_delete_account():
     route can't be used to guess a password either.
     """
     key = _client_key()
-    if not login_allowed(key):
+    if not rate_allowed(key):
         return jsonify(error="Too many attempts. Please wait a few minutes."), 429
     data = request.get_json(force=True, silent=True) or {}
     if not check_password_hash(g.account["password_hash"], data.get("password") or ""):
-        login_record_fail(key)
+        rate_record(key)
         return jsonify(error="Wrong password."), 401
 
     aid = g.account["id"]
