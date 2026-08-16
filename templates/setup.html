@@ -25,6 +25,8 @@
 let conds = new Set();
 let cfg = {};
 let lang = 'en';
+let delOpen = false;   // is the delete-account confirmation showing?
+let acctEmail = '';    // shown in the confirmation so you can see which account
 // If editing an existing pair, its token is in the URL; otherwise this is a new pair.
 let pair = (new URLSearchParams(location.search).get('id')||'').replace(/[^A-Za-z0-9_-]/g,'');
 
@@ -33,6 +35,8 @@ async function init(){
        cfg = await (await fetch(url)).json();
        (cfg.conditions||[]).forEach(c=>{if(c)conds.add(c);});
        lang = langOf(cfg); }catch(e){}
+  try{ const me = await (await fetch('/api/me')).json();
+       acctEmail = me.email || ''; }catch(e){}
   render();
 }
 
@@ -100,7 +104,38 @@ function render(){
     <div class="grid">${cards}</div>
 
     <button class="listen" style="margin-top:18px" onclick="save()">${U.save}</button>
-    <div id="msg"></div>`;
+    <div id="msg"></div>
+
+    <div class="dzone">
+      <div class="divider" style="margin:0 0 14px">${U.accountDivider}</div>
+      ${delOpen ? deleteHTML(U)
+                : `<button class="dbtn" onclick="askDelete()">${U.deleteAccount}</button>`}
+    </div>`;
+}
+
+// Google Play requires an in-app way to delete the account and its data. The
+// password is asked for again because deleting also kills the senior's phone.
+function deleteHTML(U){
+  const name = (cfg.senior_name||'').trim();
+  const warn = name ? fmt(U.deleteWarnSenior, {senior: esc(name)}) : U.deleteWarnElder;
+  return `<div class="dconf">
+    <div class="dt">${U.deleteSure}</div>
+    <div class="dw">⚠️ ${warn}</div>
+    <div class="dk">${U.deleteAlso}</div>
+    <ul>
+      <li>${U.deleteItemLogin}${acctEmail ? ' — '+esc(acctEmail) : ''}</li>
+      <li>${U.deleteItemAlerts}</li>
+      <li>${U.deleteItemPhones}</li>
+    </ul>
+    <label class="fld">${U.deletePwLbl}
+      <input id="dpw" type="password" autocomplete="off" autocorrect="off"
+             autocapitalize="off" spellcheck="false"></label>
+    <div class="drow">
+      <button class="dcancel" onclick="cancelDelete()">${U.deleteCancel}</button>
+      <button class="dgo" onclick="doDelete()">${U.deleteGo}</button>
+    </div>
+    <div class="derr" id="derr"></div>
+  </div>`;
 }
 
 function toggle(id){ readInputs(); if(conds.has(id))conds.delete(id); else conds.add(id); render(); }
@@ -111,6 +146,33 @@ function csrfHeader(){ const m=document.querySelector('meta[name="csrf-token"]')
 async function logout(){
   try{ await fetch('/api/logout',{method:'POST',headers:{'X-CSRF-Token':csrfHeader()}}); }catch(e){}
   location.href='/login';
+}
+
+// readInputs() first in both, so whatever is half-typed in the form survives
+// the re-render that opens or closes the confirmation.
+function askDelete(){
+  readInputs(); delOpen = true; render();
+  const el = document.getElementById('dpw'); if(el) el.focus();
+}
+function cancelDelete(){ readInputs(); delOpen = false; render(); }
+
+async function doDelete(){
+  const pw  = (document.getElementById('dpw')||{}).value || '';
+  const err = document.getElementById('derr');
+  const go  = document.querySelector('.dgo');
+  if(err) err.textContent = '';
+  if(go)  go.disabled = true;
+  try{
+    const r = await fetch('/api/account',{method:'DELETE',
+      headers:{'Content-Type':'application/json','X-CSRF-Token':csrfHeader()},
+      body:JSON.stringify({password:pw})});
+    if(r.ok){ location.href = '/login?deleted=1'; return; }
+    const j = await r.json().catch(()=>({}));
+    if(err) err.textContent = j.error || 'Could not delete the account.';
+  }catch(e){
+    if(err) err.textContent = 'Could not reach the server.';
+  }
+  if(go) go.disabled = false;
 }
 
 // The senior's link now carries a secret device token (not the phone number).

@@ -294,7 +294,20 @@ const UI = {
     condHearingT: 'सुनने में कठिनाई',   condHearingS: 'सूचना पर फ़ोन कंपन करेगा',
     condVisionT: 'देखने में कठिनाई',    condVisionS: 'बड़ा टेक्स्ट, ज़्यादा कंट्रास्ट, अपने-आप पढ़कर सुनाना',
     condTremorT: 'हाथ काँपना / कमज़ोर पकड़', condTremorS: 'और बड़े बटन',
-    condMemoryT: 'याददाश्त / भ्रम',     condMemoryS: 'सरल मोड — सिर्फ़ एक बड़ा बटन'
+    condMemoryT: 'याददाश्त / भ्रम',     condMemoryS: 'सरल मोड — सिर्फ़ एक बड़ा बटन',
+    accountDivider: 'खाता',
+    deleteAccount: 'मेरा खाता मिटाएँ',
+    deleteSure: 'यह वापस नहीं हो सकता।',
+    deleteWarnSenior: '{senior} का फ़ोन काम करना बंद कर देगा। उनका SOS बटन अब आप तक नहीं पहुँचेगा।',
+    deleteWarnElder: 'बुज़ुर्ग का फ़ोन काम करना बंद कर देगा। उनका SOS बटन अब आप तक नहीं पहुँचेगा।',
+    deleteAlso: 'यह भी हमेशा के लिए मिट जाएगा:',
+    deleteItemLogin: 'आपका लॉगिन',
+    deleteItemAlerts: 'सभी पुराने अलर्ट',
+    deleteItemPhones: 'दोनों फ़ोन नंबर',
+    deletePwLbl: 'पुष्टि के लिए अपना पासवर्ड डालें:',
+    deleteCancel: 'रहने दें',
+    deleteGo: 'हमेशा के लिए मिटाएँ',
+    deleteDone: 'आपका खाता मिटा दिया गया है।'
   },
 
   te: {
@@ -375,7 +388,20 @@ const UI = {
     condHearingT: 'వినికిడి కష్టం',     condHearingS: 'సూచన వచ్చినప్పుడు ఫోన్ కంపిస్తుంది',
     condVisionT: 'చూపు కష్టం',          condVisionS: 'పెద్ద టెక్స్ట్, ఎక్కువ కాంట్రాస్ట్, దానంతట చదివి వినిపించడం',
     condTremorT: 'చేతి వణుకు / బలహీన పట్టు', condTremorS: 'ఇంకా పెద్ద బటన్లు',
-    condMemoryT: 'జ్ఞాపకశక్తి / గందరగోళం', condMemoryS: 'సరళ మోడ్ — ఒకే ఒక పెద్ద బటన్'
+    condMemoryT: 'జ్ఞాపకశక్తి / గందరగోళం', condMemoryS: 'సరళ మోడ్ — ఒకే ఒక పెద్ద బటన్',
+    accountDivider: 'ఖాతా',
+    deleteAccount: 'నా ఖాతాను తొలగించు',
+    deleteSure: 'దీన్ని తిరిగి పొందలేరు.',
+    deleteWarnSenior: '{senior} ఫోన్ పని చేయడం ఆగిపోతుంది. వారి SOS బటన్ ఇక మీకు చేరదు.',
+    deleteWarnElder: 'పెద్దవారి ఫోన్ పని చేయడం ఆగిపోతుంది. వారి SOS బటన్ ఇక మీకు చేరదు.',
+    deleteAlso: 'ఇవి కూడా శాశ్వతంగా తొలగించబడతాయి:',
+    deleteItemLogin: 'మీ లాగిన్',
+    deleteItemAlerts: 'గత అన్ని హెచ్చరికలు',
+    deleteItemPhones: 'రెండు ఫోన్ నంబర్లు',
+    deletePwLbl: 'నిర్ధారించడానికి మీ పాస్‌వర్డ్ నమోదు చేయండి:',
+    deleteCancel: 'రద్దు చేయి',
+    deleteGo: 'శాశ్వతంగా తొలగించు',
+    deleteDone: 'మీ ఖాతా తొలగించబడింది.'
   },
 
   en: {
@@ -456,7 +482,20 @@ const UI = {
     condHearingT: 'Hard of hearing',  condHearingS: 'Phone vibrates on an alert',
     condVisionT: 'Trouble seeing',     condVisionS: 'Large text, high contrast, reads aloud automatically',
     condTremorT: 'Shaky hands / weak grip', condTremorS: 'Even bigger buttons',
-    condMemoryT: 'Memory / confusion', condMemoryS: 'Simple mode — just one big button'
+    condMemoryT: 'Memory / confusion', condMemoryS: 'Simple mode — just one big button',
+    accountDivider: 'Account',
+    deleteAccount: 'Delete my account',
+    deleteSure: 'This cannot be undone.',
+    deleteWarnSenior: '{senior}’s phone will stop working. Their SOS button will no longer reach you.',
+    deleteWarnElder: 'The elder’s phone will stop working. Their SOS button will no longer reach you.',
+    deleteAlso: 'Also deleted forever:',
+    deleteItemLogin: 'Your login',
+    deleteItemAlerts: 'Every past alert',
+    deleteItemPhones: 'Both phone numbers',
+    deletePwLbl: 'Enter your password to confirm:',
+    deleteCancel: 'Cancel',
+    deleteGo: 'Delete forever',
+    deleteDone: 'Your account has been deleted.'
   }
 };
 

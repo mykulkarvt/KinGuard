@@ -597,6 +597,46 @@ def api_me():
                           for r in rows])
 
 
+@app.route("/api/account", methods=["DELETE"])
+@api_login_required
+def api_delete_account():
+    """Permanently delete this account and everything it owns.
+
+    Google Play requires a real deletion that the user can start from inside the
+    app — deactivating or freezing an account does not satisfy the policy — so
+    every row goes here and nothing is kept.
+
+    The password is re-checked even though the caller is already logged in. This
+    is not the usual ceremony: deleting a family account also revokes the senior
+    device tokens, which silently kills the SOS button on the senior's phone.
+    Whoever is holding an unlocked family phone should not be able to do that to
+    someone else in two taps. Rate-limited on the same counter as login so this
+    route can't be used to guess a password either.
+    """
+    key = _client_key()
+    if not login_allowed(key):
+        return jsonify(error="Too many attempts. Please wait a few minutes."), 429
+    data = request.get_json(force=True, silent=True) or {}
+    if not check_password_hash(g.account["password_hash"], data.get("password") or ""):
+        login_record_fail(key)
+        return jsonify(error="Wrong password."), 401
+
+    aid = g.account["id"]
+    with closing(get_db()) as con, con:
+        # Child rows are keyed by pair, not by account, so collect the owned
+        # pairs first and clear each stream before the settings rows go.
+        pairs = [r["pair"] for r in con.execute(
+            "SELECT pair FROM settings WHERE owner_account_id=?", (aid,)).fetchall()]
+        for p in pairs:
+            con.execute("DELETE FROM alerts         WHERE pair=?", (p,))
+            con.execute("DELETE FROM senior_devices WHERE pair=?", (p,))
+            con.execute("DELETE FROM push_subs      WHERE pair=?", (p,))
+        con.execute("DELETE FROM settings WHERE owner_account_id=?", (aid,))
+        con.execute("DELETE FROM accounts WHERE id=?", (aid,))
+    session.clear()
+    return jsonify(ok=True)
+
+
 # ---------- settings API (family, owner-only) ----------
 @app.route("/api/settings")
 @api_login_required
