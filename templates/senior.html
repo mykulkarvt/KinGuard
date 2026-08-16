@@ -33,13 +33,36 @@ let U=UI.en, R=RULES.en;
 // lives in the page or the URL; requests are authenticated by that cookie.
 function api(path){ return path; }
 
-// Shown if this phone has never been linked (no valid device cookie). The phones
-// link through the private one-time link the family sends — nothing to type.
+// The settings this screen would normally read are gone whenever the phone is
+// unlinked — the family may have revoked the link or deleted their account — so
+// the last known language and accessibility needs are kept on the phone itself.
+// Without this the elder gets default-size English at the moment the app stops
+// working, which is exactly the wrong moment to lose their own language.
+const PREF_KEY = 'kg_last_prefs';
+function rememberPrefs(lang){
+  try{ localStorage.setItem(PREF_KEY, JSON.stringify({
+    lang: lang, big_text: !!cfg.big_text, high_contrast: !!cfg.high_contrast
+  })); }catch(e){}
+}
+function lastPrefs(){
+  try{ return JSON.parse(localStorage.getItem(PREF_KEY)) || {}; }catch(e){ return {}; }
+}
+
+// Shown whenever this phone has no working link: never set up, link revoked, or
+// the family's account deleted. The wording has to be true in all three cases —
+// it must not promise a link that no longer exists — and it is deliberately NOT
+// styled 'safe', because a phone that cannot call for help is not a reassuring
+// state and must not look like one.
 function renderNoPair(){
+  const p = lastPrefs();
+  const V = UI[p.lang] || UI.en;
+  if(p.big_text)      document.body.classList.add('big-text');
+  if(p.high_contrast) document.body.classList.add('high-contrast');
+  document.documentElement.lang = p.lang || 'en';
   document.getElementById('stage').innerHTML =
-    `<div class="verdict safe" role="alert"><span class="vic" aria-hidden="true">🔗</span>
-      <span><div class="vt">Open your KinGuard link</div>
-      <div class="vw">Ask your family for the link they set up for you, and open it on this phone. It connects the two phones securely.</div></span></div>`;
+    `<div class="verdict" role="alert"><span class="vic" aria-hidden="true">⚠️</span>
+      <span><div class="vt">${esc(V.noPairTitle)}</div>
+      <div class="vw">${esc(V.noPairBody)}</div></span></div>`;
 }
 
 async function init(){
@@ -51,6 +74,7 @@ async function init(){
   if(!linked){ renderNoPair(); return; }
   const lang=langOf(cfg);
   U=UI[lang]; R=RULES[lang];
+  rememberPrefs(lang);   // so the unpaired screen can still speak their language
   document.documentElement.lang=lang;
   document.title='KinGuard — '+(cfg.senior_name||'')+U.possPhone;
   const tag=document.getElementById('tag'); if(tag) tag.textContent=U.tagline;
