@@ -541,6 +541,13 @@ def senior():
     return render_template("senior.html")
 
 
+@app.route("/privacy")
+def privacy():
+    # Public on purpose: Play requires a privacy policy reachable without an
+    # account, and the Play listing links straight here.
+    return render_template("privacy.html")
+
+
 # ---------- auth API ----------
 @app.route("/api/register", methods=["POST"])
 def api_register():
