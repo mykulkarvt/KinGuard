@@ -426,7 +426,10 @@ DEFAULT_SETTINGS = {
 
 
 # ---------- Web Push (VAPID) ----------
-VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:admin@example.com")
+# Sent to the browser push services as the contact for this application server.
+# Defaulted to the real project address rather than a placeholder, so a missing
+# env var doesn't hand Google and Mozilla an unreachable contact.
+VAPID_SUBJECT = os.environ.get("VAPID_SUBJECT", "mailto:kinguard.support@gmail.com")
 VAPID_PUBLIC = os.environ.get("VAPID_PUBLIC", "")
 VAPID_PRIVATE = os.environ.get("VAPID_PRIVATE", "")
 
