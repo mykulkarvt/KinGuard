@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.kinguard.app",
+    "sha256_cert_fingerprints": [
+      "C5:E7:61:97:1D:35:3C:AD:82:2E:F4:15:2B:86:28:3E:1E:E7:31:6D:0A:58:9C:7D:E2:02:E6:C7:A2:86:F5:1B"
+    ]
+  }
+}]

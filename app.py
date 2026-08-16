@@ -548,6 +548,23 @@ def privacy():
     return render_template("privacy.html")
 
 
+@app.route("/.well-known/assetlinks.json")
+def assetlinks():
+    # Digital Asset Links: proves this site and the Play app com.kinguard.app
+    # belong to the same owner. Without it the TWA opens inside a browser tab
+    # with the address bar showing, instead of looking like an installed app.
+    # Kept in static/ rather than a literal .well-known directory so the file is
+    # visible and editable in the PythonAnywhere Files tab.
+    #
+    # The fingerprint must match the certificate Play actually ships the app
+    # with. If Play App Signing is enabled, that is the *app signing* key from
+    # Play Console (Setup > App integrity), NOT the upload key — listing only
+    # the upload key silently fails verification. Extra fingerprints can simply
+    # be added to the array.
+    return send_from_directory(app.static_folder, "assetlinks.json",
+                               mimetype="application/json")
+
+
 @app.route("/delete-account")
 def delete_account_info():
     # Play requires the account-deletion path to be discoverable from OUTSIDE the
