@@ -5,6 +5,21 @@ kinguard.db
 
 # Packaged snapshot / build artifacts
 *.zip
+*.aab
+*.apk
+
+# Android signing material — NEVER commit these.
+# signing.keystore is the private key for the Play listing and
+# signing-key-info.txt holds its passwords. Anyone with both can publish an
+# update to com.kinguard.app as if they were the developer. A signing key
+# cannot be rotated once an app is live, so a leak is permanent.
+*.keystore
+*.jks
+signing-key-info.txt
+
+# Stray copy of the Digital Asset Links file. The served one is
+# static/assetlinks.json; this root copy is PWABuilder's original.
+/assetlinks.json
 
 # Python
 __pycache__/
