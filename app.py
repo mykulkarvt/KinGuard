@@ -548,6 +548,15 @@ def privacy():
     return render_template("privacy.html")
 
 
+@app.route("/delete-account")
+def delete_account_info():
+    # Play requires the account-deletion path to be discoverable from OUTSIDE the
+    # app as well as inside it, so this must stay reachable without logging in —
+    # somebody who cannot get into their account still has to be able to find it.
+    # This URL is the one given to Google in the Data Safety form.
+    return render_template("delete-account.html")
+
+
 # ---------- auth API ----------
 @app.route("/api/register", methods=["POST"])
 def api_register():

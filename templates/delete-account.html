@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KinGuard — Delete Your Account</title>
+<style>
+  :root{--teal:#0F6B5C;--teal-dark:#0A4E43;--cream:#FBF6EC;--ink:#1F2421;--muted:#5c554e;--line:#e5ddcf;--red:#C0392B}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:#f4efe6;line-height:1.6}
+  header{background:var(--teal-dark);color:#fff;padding:22px 20px}
+  header .wrap{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  header .sh{width:34px;height:34px;border-radius:50%;background:var(--teal);display:flex;align-items:center;justify-content:center}
+  header .sh svg{width:18px;height:18px;stroke:var(--cream);fill:none;stroke-width:2}
+  header h1{font-size:1.2rem;font-weight:800}
+  main{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  .card{background:var(--cream);border:1px solid var(--line);border-radius:14px;padding:26px 26px 30px}
+  h2{font-size:1.05rem;color:var(--teal-dark);margin:22px 0 8px;font-weight:800}
+  h2:first-of-type{margin-top:6px}
+  p,li{font-size:.96rem;color:var(--ink);margin-bottom:9px}
+  ul,ol{margin:4px 0 12px 22px}
+  .muted{color:var(--muted);font-size:.85rem}
+  .note{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:10px 0;font-size:.9rem}
+  .warn{background:#FBEAE7;border:1px solid #F1C9C2;border-radius:10px;padding:14px 16px;margin:14px 0}
+  .warn strong{color:var(--red)}
+  .steps li{margin-bottom:7px}
+  a{color:var(--teal)}
+  strong{color:var(--teal-dark)}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="sh"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <h1>KinGuard — Delete Your Account</h1>
+  </div>
+</header>
+<main>
+  <div class="card">
+    <p class="muted">Last updated: 15 August 2026</p>
+
+    <p>This page explains how to delete your <strong>KinGuard</strong> account and all of the data associated with it.
+    KinGuard is an independent project; you can reach us at <strong>kinguard.support@gmail.com</strong>.</p>
+
+    <h2>Delete your account from inside the app</h2>
+    <p>Deletion takes effect immediately and does not need to go through us.</p>
+    <ol class="steps">
+      <li>Open KinGuard and <strong>log in</strong> as the family member.</li>
+      <li>Go to the <strong>Setup</strong> screen.</li>
+      <li>Scroll to the bottom, to the section headed <strong>Account</strong>.</li>
+      <li>Tap <strong>Delete my account</strong>.</li>
+      <li>Read the confirmation, enter your password, and tap <strong>Delete forever</strong>.</li>
+    </ol>
+    <p>You will be signed out straight away and returned to the login screen.</p>
+
+    <div class="warn">
+      <p style="margin-bottom:0"><strong>Before you delete:</strong> this also switches off the elderly person&#8217;s
+      phone. Their KinGuard link is revoked, so their SOS button will no longer be able to reach you. Their phone will
+      show a message telling them it is no longer connected.</p>
+    </div>
+
+    <h2>What is deleted</h2>
+    <p>Everything tied to the account is removed from our database immediately. Nothing is archived, and the account is
+    not merely deactivated or frozen. Specifically:</p>
+    <ul>
+      <li>Your <strong>login</strong> &#8212; email address and password hash.</li>
+      <li>The <strong>setup details</strong> &#8212; the elder&#8217;s name and phone number, the family member&#8217;s
+      name and phone number, accessibility needs, and language preference.</li>
+      <li>The <strong>entire alert history</strong> for the account.</li>
+      <li>The <strong>device link</strong> on the elder&#8217;s phone, which is revoked and deleted.</li>
+      <li>Any <strong>push notification subscriptions</strong> you had enabled.</li>
+    </ul>
+    <p>We keep <strong>no residual copy</strong> of any of it. Deletion cannot be undone.</p>
+
+    <h2>If you cannot log in</h2>
+    <p>KinGuard does not currently send email, so there is no automatic password reset. If you have forgotten your
+    password and cannot get into the app, email <strong>kinguard.support@gmail.com</strong> from the address you registered
+    with and ask us to delete your account. We will verify the request and delete it for you.</p>
+
+    <div class="note">Please send the request from the email address the account was registered with &#8212; that is how
+    we confirm the account is yours.</div>
+
+    <h2>Removing the app itself</h2>
+    <p>Deleting your account removes your data from our servers. Uninstalling the app from a phone is separate, and can
+    be done at any time from the phone&#8217;s home screen in the usual way. Uninstalling on its own does
+    <strong>not</strong> delete your account.</p>
+
+    <h2>Questions</h2>
+    <p>Anything about deletion or your data: <strong>kinguard.support@gmail.com</strong>. Our
+    <a href="/privacy">privacy policy</a> explains what KinGuard collects and why.</p>
+  </div>
+</main>
+</body>
+</html>
