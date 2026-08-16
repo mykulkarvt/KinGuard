@@ -102,7 +102,7 @@ so both phones can reach it. Then both install the app from that public URL.
 | `requirements.txt` / `Procfile` | dependencies + start command for hosting (e.g. Render) |
 | `kinguard.db` | created automatically on first run |
 
-## Honest limitations (good for your report)
+## Honest limitations 
 
 - **The alert needs internet** on both phones. (A no-internet version could send
   an SMS instead, since SMS uses the cellular network, not data.)
