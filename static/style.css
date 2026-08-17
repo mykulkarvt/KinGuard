@@ -56,6 +56,19 @@ header.fam{background:var(--teal-dark);}
 .listen:active{transform:translateY(4px);box-shadow:var(--shadow-press);}
 .listen.speaking{background:var(--amber);color:#3a2c08;}
 
+/* Language dropdown on Setup. Matches .fld input so it sits with the name and
+   phone fields below it; the native control gives the phone's own picker and
+   its keyboard/screen-reader behaviour for free. appearance:none drops the OS
+   arrow, so one is drawn back on as a background image. */
+.langpick{display:block;width:100%;margin:0 0 4px;font-family:inherit;font-size:18px;font-weight:700;
+  padding:13px 44px 13px 14px;border:2px solid #ECE3D2;border-radius:14px;
+  background-color:#fff;color:var(--ink);cursor:pointer;
+  appearance:none;-webkit-appearance:none;
+  background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230F6B5C' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 15px center;background-size:15px;}
+.langpick:focus{outline:none;border-color:var(--teal);}
+.langpick:focus-visible{outline:3px solid var(--amber);outline-offset:2px;}
+
 /* Shown on iPhone in place of the alerts button, which iOS hides until the
    app is installed to the Home Screen. */
 .ioshint{margin-top:18px;background:var(--teal-soft);border:2px solid #BFE0D6;border-radius:18px;

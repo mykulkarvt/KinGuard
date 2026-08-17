@@ -78,17 +78,19 @@ function render(){
         <span class="tick">${on?'✓':''}</span></button>`;
   });
 
-  let langs='';
+  // A dropdown rather than one card per language: the card list grew past the
+  // point where it was scannable, and it pushed the actual setup fields off the
+  // first screen. The needs below stay as cards — they are multi-select and
+  // carry an icon and a description, which a dropdown cannot show.
+  let langOpts='';
   LANGS.forEach(l=>{
-    const on = l.id===lang;
-    langs += `<button class="opt sel-card ${on?'selected':''}" onclick="setLang('${l.id}')" aria-pressed="${on}">
-        <span class="lbl">${esc(l.name)}</span>
-        <span class="tick">${on?'✓':''}</span></button>`;
+    langOpts += `<option value="${esc(l.id)}"${l.id===lang?' selected':''}>${esc(l.name)}</option>`;
   });
 
   document.getElementById('stage').innerHTML = `
     <div class="divider" style="margin:4px 0 14px">${U.langDivider}</div>
-    <div class="grid">${langs}</div>
+    <select class="langpick" id="langsel" aria-label="${esc(U.langDivider)}"
+            onchange="setLang(this.value)">${langOpts}</select>
 
     <div class="lead" style="margin:22px 0 14px">${U.whichPhone}</div>
     <label class="fld">${U.seniorNameLbl}
