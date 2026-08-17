@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KinGuard — How It Works</title>
+<meta name="description" content="How KinGuard protects an elderly relative from scams, with a family member in the loop. Setup takes about five minutes.">
+<meta name="theme-color" content="#0F6B5C">
+<link rel="apple-touch-icon" href="/static/icon-192.png">
+<style>
+  :root{--teal:#0F6B5C;--teal-dark:#0A4E43;--teal-soft:#E4F0EC;--cream:#FBF6EC;--ink:#1F2421;
+        --muted:#5c554e;--line:#e5ddcf;--red:#C0392B;--red-soft:#FBEAE7;--amber:#B8791A}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:#f4efe6;line-height:1.6}
+  header{background:var(--teal-dark);color:#fff;padding:22px 20px}
+  header .wrap{max-width:760px;margin:0 auto;display:flex;align-items:center;gap:12px}
+  header .sh{width:34px;height:34px;border-radius:50%;background:var(--teal);display:flex;
+    align-items:center;justify-content:center;flex:none}
+  header .sh svg{width:18px;height:18px;stroke:var(--cream);fill:none;stroke-width:2}
+  header h1{font-size:1.2rem;font-weight:800}
+  main{max-width:760px;margin:0 auto;padding:28px 20px 60px}
+  .card{background:var(--cream);border:1px solid var(--line);border-radius:14px;
+    padding:26px 26px 30px;margin-bottom:18px}
+  .lede{font-size:1.06rem}
+  h2{font-size:1.05rem;color:var(--teal-dark);margin:24px 0 8px;font-weight:800}
+  h2:first-of-type{margin-top:4px}
+  h3{font-size:.95rem;color:var(--teal-dark);margin:16px 0 6px;font-weight:800}
+  p,li{font-size:.96rem;color:var(--ink);margin-bottom:9px}
+  ul,ol{margin:4px 0 12px 22px}
+  li{margin-bottom:6px}
+  .muted{color:var(--muted);font-size:.85rem}
+  a{color:var(--teal)}
+  strong{color:var(--teal-dark)}
+
+  /* Which phone a step happens on — the whole app is two phones, so every
+     instruction says which one it belongs to. */
+  .who{display:inline-block;font-size:.7rem;font-weight:800;letter-spacing:.07em;
+    text-transform:uppercase;padding:3px 9px;border-radius:99px;vertical-align:middle;
+    margin-left:8px;white-space:nowrap}
+  .who.fam{background:var(--teal-soft);color:var(--teal-dark);border:1px solid #BFE0D6}
+  .who.eld{background:#FBF0DC;color:#7A5410;border:1px solid #EBD9B4}
+
+  /* Numbered setup steps: this genuinely is a sequence, so it is numbered. */
+  .steps{list-style:none;margin:14px 0 4px;counter-reset:s}
+  .steps > li{counter-increment:s;position:relative;padding-left:44px;margin-bottom:18px}
+  .steps > li::before{content:counter(s);position:absolute;left:0;top:1px;width:30px;height:30px;
+    border-radius:50%;background:var(--teal);color:#fff;font-weight:800;font-size:.95rem;
+    display:flex;align-items:center;justify-content:center}
+  .steps h3{margin-top:0}
+
+  .note{background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:12px 14px;margin:12px 0;font-size:.9rem}
+  .note.alert{background:var(--red-soft);border-color:#F1C9C2}
+  .note.alert strong{color:var(--red)}
+  table{width:100%;border-collapse:collapse;margin:10px 0 14px;font-size:.92rem}
+  th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--teal-dark);font-weight:800;font-size:.8rem;text-transform:uppercase;letter-spacing:.05em}
+  .tblwrap{overflow-x:auto}
+  .cta{display:inline-block;background:var(--teal);color:#fff;text-decoration:none;font-weight:800;
+    padding:12px 20px;border-radius:12px;margin-top:6px}
+  .cta:hover{background:var(--teal-dark)}
+  footer{max-width:760px;margin:0 auto;padding:0 20px 50px;font-size:.85rem;color:var(--muted)}
+  footer a{color:var(--teal)}
+  a:focus-visible,.cta:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="sh"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+    <h1>KinGuard — How It Works</h1>
+  </div>
+</header>
+
+<main>
+  <div class="card">
+    <p class="lede">KinGuard helps protect an elderly relative from phone and message scams &#8212; with
+    a family member in the loop. If something feels wrong, the elder taps one button, and you get
+    alerted straight away with what to say to them.</p>
+
+    <h2>It uses two phones</h2>
+    <p>That is the whole idea, and it is worth understanding before you set anything up:</p>
+    <ul>
+      <li><strong>The elder&#8217;s phone</strong> shows a few very large buttons. There is no account
+      and no password &#8212; they never log in, and never have to remember anything.</li>
+      <li><strong>Your phone</strong> (the family member) receives the alerts. This is the one with
+      the login.</li>
+    </ul>
+    <p>You do the setup once, on your own phone, and then send the elder a private link. It takes
+    about five minutes.</p>
+  </div>
+
+  <div class="card">
+    <h2>Setting it up</h2>
+    <ol class="steps">
+      <li>
+        <h3>Create your account <span class="who fam">Your phone</span></h3>
+        <p>Go to <a href="/register">Create an account</a> and sign up with your email address and a
+        password. Only the family member needs an account.</p>
+      </li>
+      <li>
+        <h3>Fill in the Setup screen <span class="who fam">Your phone</span></h3>
+        <p>You will be asked for:</p>
+        <ul>
+          <li><strong>Language</strong> &#8212; Hindi, Telugu or English. The elder&#8217;s phone will be
+          entirely in the language you pick.</li>
+          <li><strong>The elder&#8217;s name and phone number</strong> &#8212; so you can call them with one
+          tap when an alert arrives.</li>
+          <li><strong>Your name and phone number</strong> &#8212; so they can call you.</li>
+          <li><strong>The elder&#8217;s needs</strong> &#8212; see the table further down. This changes how
+          their phone looks and behaves.</li>
+        </ul>
+      </li>
+      <li>
+        <h3>Send the elder their link <span class="who fam">Your phone</span></h3>
+        <p>When you save, KinGuard gives you a private link. Send it to the elder however you
+        normally message them.</p>
+        <div class="note"><strong>Keep this link private.</strong> Anyone who opens it becomes the
+        linked elder phone for your account. If you ever need to, you can issue a fresh link from
+        Setup, which immediately stops the old one working.</div>
+      </li>
+      <li>
+        <h3>They open the link once <span class="who eld">Elder&#8217;s phone</span></h3>
+        <p>That single tap links their phone for good. After that the app just opens &#8212; no login,
+        no password, nothing to remember. Ask them to add it to their Home Screen so it is easy to
+        find in a hurry.</p>
+      </li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <h2>What happens during a scam</h2>
+
+    <h3>On the elder&#8217;s phone <span class="who eld">Elder&#8217;s phone</span></h3>
+    <p>They open KinGuard and see one large red button &#8212; <strong>&#8220;I am scared &#8212; call my
+    family now&#8221;</strong> &#8212; and below it a short list of the situations that actually happen:</p>
+    <ul>
+      <li>Police or CBI threatening to arrest them (the &#8220;digital arrest&#8221; scam)</li>
+      <li>Someone asking them to move money to a &#8220;safe account&#8221;</li>
+      <li>A familiar voice urgently asking for money</li>
+      <li>A link about KYC, a blocked account or a refund</li>
+      <li>A prize, lottery, or a promise to double their money</li>
+    </ul>
+    <p>Whichever they tap, the phone tells them plainly that it is a scam, what to do right now
+    &#8212; hang up, send no money, give nobody an OTP &#8212; and offers to call you.</p>
+
+    <h3>On your phone <span class="who fam">Your phone</span></h3>
+    <p>The alert appears within seconds, showing what they reported and when. You get:</p>
+    <ul>
+      <li><strong>Call them now</strong> &#8212; one tap, using their name</li>
+      <li><strong>What to say to them</strong> &#8212; three specific lines for that exact scam, so you
+      do not have to think of them while worried</li>
+      <li><strong>Report to 1930</strong> &#8212; India&#8217;s cybercrime helpline</li>
+      <li><strong>They are safe &#8212; I have handled it</strong> &#8212; clears the alert</li>
+    </ul>
+  </div>
+
+  <div class="card">
+    <h2>Getting alerts when the app is closed</h2>
+    <p>Open your family screen and tap <strong>&#8220;Get alerts even when closed&#8221;</strong>, then allow
+    notifications. Without this, alerts only appear while you have the app open.</p>
+    <div class="note"><strong>On iPhone</strong> this button only appears once KinGuard has been added
+    to the Home Screen &#8212; that is an Apple restriction, not a KinGuard one. Tap
+    <strong>Share</strong>, then <strong>Add to Home Screen</strong>, and open KinGuard from that icon.
+    Until then the alerts still show while the page is open.</div>
+  </div>
+
+  <div class="card">
+    <h2>Making it easier to use</h2>
+    <p>On the Setup screen you can tell KinGuard what the elder finds difficult. Their phone then
+    opens that way automatically &#8212; they do not have to change any settings themselves.</p>
+    <div class="tblwrap">
+      <table>
+        <thead><tr><th>If they have</th><th>Their phone will</th></tr></thead>
+        <tbody>
+          <tr><td>Trouble hearing</td><td>Vibrate when an alert arrives</td></tr>
+          <tr><td>Trouble seeing</td><td>Use large text and high contrast, and read everything aloud automatically</td></tr>
+          <tr><td>Shaky hands or a weak grip</td><td>Show even larger buttons</td></tr>
+          <tr><td>Memory difficulty or confusion</td><td>Switch to simple mode &#8212; just one big button</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">You can pick more than one, and change them later at any time.</p>
+  </div>
+
+  <div class="card">
+    <h2>Installing it as an app</h2>
+    <p>KinGuard works in the browser, but it is much easier to reach as an app icon &#8212; which
+    matters when someone is being pressured on a call.</p>
+    <ul>
+      <li><strong>Android:</strong> Chrome offers to install it, or use the menu and choose
+      <strong>Add to Home screen</strong>.</li>
+      <li><strong>iPhone:</strong> in Safari, tap <strong>Share</strong>, then
+      <strong>Add to Home Screen</strong>. On iPhone this is also what enables alerts while the app
+      is closed.</li>
+    </ul>
+    <p>It works offline for the parts that matter, so the elder&#8217;s screen still opens on a weak
+    connection. Sending an alert does need internet on both phones.</p>
+  </div>
+
+  <div class="card">
+    <h2>Privacy, in short</h2>
+    <ul>
+      <li>Both phone numbers are <strong>encrypted</strong> before they are stored.</li>
+      <li>KinGuard does not read messages, listen to calls, or track location. The elder chooses
+      what to report, by tapping a button.</li>
+      <li>Nothing is shared with anyone else.</li>
+      <li>You can <strong>delete your account and everything in it</strong> from inside the app, at
+      any time, with no residual copy kept.</li>
+    </ul>
+    <p>Full detail: <a href="/privacy">Privacy Policy</a> &#183;
+    <a href="/delete-account">Deleting your account</a></p>
+  </div>
+
+  <div class="card">
+    <h2>Ready to start?</h2>
+    <p>Setup takes about five minutes, and you only do it once.</p>
+    <a class="cta" href="/register">Create an account &#8250;</a>
+    <p class="muted" style="margin-top:14px">Already set up? <a href="/login">Log in</a></p>
+  </div>
+</main>
+
+<footer>
+  KinGuard &#183; <a href="/privacy">Privacy</a> &#183;
+  <a href="/delete-account">Delete account</a> &#183;
+  <a href="/login">Log in</a>
+</footer>
+</body>
+</html>

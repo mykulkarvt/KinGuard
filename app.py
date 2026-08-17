@@ -581,6 +581,14 @@ def assetlinks():
                                mimetype="application/json")
 
 
+@app.route("/how-it-works")
+def how_it_works():
+    # Public on purpose: this is the page you send someone BEFORE they have an
+    # account. Everything else on the site is either a form or behind a login,
+    # so without this the front door is a bare login screen with no explanation.
+    return render_template("how-it-works.html")
+
+
 @app.route("/delete-account")
 def delete_account_info():
     # Play requires the account-deletion path to be discoverable from OUTSIDE the
