@@ -64,6 +64,29 @@ MAX_PHONE_LEN = 25
 MAX_EMAIL_LEN = 120
 MIN_PASSWORD_LEN = 8
 
+# ---------- Sign in with Google ----------
+# Only the client id is needed: this uses Google Identity Services, where the
+# browser receives a signed ID token and posts it here for verification. There
+# is no authorization code and so no client secret to keep. Unset (the default)
+# disables the feature everywhere, so the app still runs locally and on any
+# deployment that has not configured it.
+GOOGLE_CLIENT_ID = os.environ.get("KINGUARD_GOOGLE_CLIENT_ID", "").strip()
+
+# An account created through Google has no password. password_hash is NOT NULL
+# in a table that already holds real rows, and SQLite cannot drop that
+# constraint without rebuilding the table, so passwordless accounts store this
+# sentinel instead. Every password path checks for it explicitly rather than
+# handing it to check_password_hash.
+NO_PASSWORD = ""
+
+
+def has_password(row):
+    """True if this account can be logged into with a password."""
+    try:
+        return bool(row["password_hash"])
+    except (KeyError, IndexError):
+        return False
+
 
 # ---------- phone-number encryption at rest ----------
 # Phone numbers are personal data, so they are encrypted before being written to
@@ -183,6 +206,17 @@ def init_db():
                    created_at      INTEGER NOT NULL
                )"""
         )
+
+        # --- Google sign-in: Google's stable subject id for this account ---
+        # Keyed on 'sub', never on email: Google lets a user change the address
+        # on an account, but sub is permanent. NULL for password-only accounts.
+        if not _has_col(con, "accounts", "google_sub"):
+            con.execute("ALTER TABLE accounts ADD COLUMN google_sub TEXT")
+        # ADD COLUMN cannot carry UNIQUE, so the constraint goes on an index.
+        # SQLite treats NULLs as distinct, so every password-only account can
+        # keep a NULL here without colliding.
+        con.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_google_sub "
+                    "ON accounts(google_sub)")
 
         # --- alerts: one stream per pair ---
         con.execute(
@@ -377,6 +411,48 @@ def rate_record(key):
         _login_hits.setdefault(key, []).append(time.time())
 
 
+# ---------- Google ID token verification ----------
+def verify_google_token(credential):
+    """Verify a Google Identity Services ID token.
+
+    Returns (sub, email) on success or None. google-auth does the security
+    critical work: it checks the RS256 signature against Google's published
+    keys, the issuer, the expiry, and — because the client id is passed in —
+    that the token was minted for THIS app. A token verified without that
+    audience check would let anyone replay a Google token issued for some other
+    site and sign in as that user here.
+
+    The library fetches Google's public keys over HTTPS. PythonAnywhere's free
+    tier only permits outbound traffic to an allowlist, which covers
+    .googleapis.com, so this works there; requests picks up the proxy from the
+    environment automatically.
+    """
+    if not GOOGLE_CLIENT_ID or not credential:
+        return None
+    try:
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+        claims = google_id_token.verify_oauth2_token(
+            credential, google_requests.Request(), GOOGLE_CLIENT_ID)
+    except Exception:
+        # Bad signature, wrong audience, expired, or the key fetch failed. All
+        # of these mean "not signed in" and none should leak a reason.
+        return None
+
+    # verify_oauth2_token already rejects a wrong issuer, but this is the check
+    # that decides whether a stranger becomes an existing user, so assert it.
+    if claims.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        return None
+    sub = (claims.get("sub") or "").strip()
+    email = _norm_email(claims.get("email"))
+    # An unverified address must never be trusted: it is what links this login
+    # to an existing KinGuard account, so accepting it would let someone claim
+    # another person's account by putting their address on a Google profile.
+    if not sub or not email or not claims.get("email_verified"):
+        return None
+    return sub, email
+
+
 # ---------- senior device auth ----------
 def device_pair():
     """Resolve the senior device cookie to its (non-revoked) pair, or ''."""
@@ -516,14 +592,14 @@ def index():
 def login_page():
     if current_account():
         return redirect("/family")
-    return render_template("login.html")
+    return render_template("login.html", google_client_id=GOOGLE_CLIENT_ID)
 
 
 @app.route("/register")
 def register_page():
     if current_account():
         return redirect("/family")
-    return render_template("register.html")
+    return render_template("register.html", google_client_id=GOOGLE_CLIENT_ID)
 
 
 @app.route("/setup")
@@ -631,9 +707,55 @@ def api_login():
     pw = data.get("password") or ""
     with closing(get_db()) as con:
         row = con.execute("SELECT * FROM accounts WHERE email=?", (email,)).fetchone()
-    if row is None or not check_password_hash(row["password_hash"], pw):
+    # A Google-created account has no password, so there is nothing to check
+    # against — refuse before reaching check_password_hash, which would
+    # otherwise be handed the empty sentinel.
+    if row is None or not has_password(row) or not check_password_hash(row["password_hash"], pw):
         rate_record(key)
+        # Deliberately the same message either way: saying "this account uses
+        # Google" would confirm to a stranger that the address is registered.
         return jsonify(error="Wrong email or password."), 401
+    _start_session(row["id"], row["session_version"])
+    return jsonify(ok=True)
+
+
+@app.route("/api/auth/google", methods=["POST"])
+def api_auth_google():
+    """Sign in (or sign up) with a Google ID token from the browser.
+
+    Rate-limited on the same counter as login. Google has already
+    authenticated the user, but the route still creates accounts, so it is
+    worth the same protection as /api/register.
+    """
+    if not GOOGLE_CLIENT_ID:
+        return jsonify(error="Google sign-in is not available."), 503
+    key = _client_key()
+    if not rate_allowed(key):
+        return jsonify(error="Too many attempts. Please wait a few minutes."), 429
+    data = request.get_json(force=True, silent=True) or {}
+    verified = verify_google_token(data.get("credential"))
+    if not verified:
+        rate_record(key)
+        return jsonify(error="Could not sign in with Google."), 401
+    sub, email = verified
+
+    with closing(get_db()) as con, con:
+        row = con.execute("SELECT * FROM accounts WHERE google_sub=?", (sub,)).fetchone()
+        if row is None:
+            # No account for this Google identity yet. If the verified address
+            # already has a KinGuard account, this is the same person coming
+            # back through a different door, so attach Google to it rather than
+            # creating a second account they cannot reach. Safe only because
+            # the address was asserted verified by Google above.
+            row = con.execute("SELECT * FROM accounts WHERE email=?", (email,)).fetchone()
+            if row is not None:
+                con.execute("UPDATE accounts SET google_sub=? WHERE id=?", (sub, row["id"]))
+            else:
+                cur = con.execute(
+                    "INSERT INTO accounts (email, password_hash, google_sub, created_at) "
+                    "VALUES (?,?,?,?)",
+                    (email, NO_PASSWORD, sub, int(time.time())))
+                row = con.execute("SELECT * FROM accounts WHERE id=?", (cur.lastrowid,)).fetchone()
     _start_session(row["id"], row["session_version"])
     return jsonify(ok=True)
 
@@ -652,6 +774,10 @@ def api_me():
             "SELECT pair, senior_name FROM settings WHERE owner_account_id=? ORDER BY rowid",
             (g.account["id"],)).fetchall()
     return jsonify(email=g.account["email"], csrf=session.get("csrf", ""),
+                   # Setup needs this to know whether deleting the account
+                   # should ask for a password or a Google confirmation.
+                   has_password=has_password(g.account),
+                   google_client_id=GOOGLE_CLIENT_ID,
                    pairs=[{"pair": r["pair"], "senior_name": r["senior_name"] or ""}
                           for r in rows])
 
@@ -676,9 +802,22 @@ def api_delete_account():
     if not rate_allowed(key):
         return jsonify(error="Too many attempts. Please wait a few minutes."), 429
     data = request.get_json(force=True, silent=True) or {}
-    if not check_password_hash(g.account["password_hash"], data.get("password") or ""):
-        rate_record(key)
-        return jsonify(error="Wrong password."), 401
+
+    # Re-authenticate with whatever this account actually has. An account
+    # created through Google has no password, and Play requires deletion to
+    # work for every user, so a fresh Google token stands in for the password
+    # prompt — same purpose, same freshness, no weaker.
+    if has_password(g.account):
+        if not check_password_hash(g.account["password_hash"], data.get("password") or ""):
+            rate_record(key)
+            return jsonify(error="Wrong password."), 401
+    else:
+        verified = verify_google_token(data.get("credential"))
+        # Must be the SAME Google identity: any valid token would otherwise let
+        # a different signed-in Google user delete this account.
+        if not verified or verified[0] != (g.account["google_sub"] or ""):
+            rate_record(key)
+            return jsonify(error="Please confirm with Google to delete your account."), 401
 
     aid = g.account["id"]
     with closing(get_db()) as con, con:

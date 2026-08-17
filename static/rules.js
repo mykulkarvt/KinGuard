@@ -308,6 +308,7 @@ const UI = {
     deleteItemAlerts: 'सभी पुराने अलर्ट',
     deleteItemPhones: 'दोनों फ़ोन नंबर',
     deletePwLbl: 'पुष्टि के लिए अपना पासवर्ड डालें:',
+    deleteGoogleLbl: 'मिटाने की पुष्टि Google से करें:',
     deleteCancel: 'रहने दें',
     deleteGo: 'हमेशा के लिए मिटाएँ',
     deleteDone: 'आपका खाता मिटा दिया गया है।'
@@ -405,6 +406,7 @@ const UI = {
     deleteItemAlerts: 'గత అన్ని హెచ్చరికలు',
     deleteItemPhones: 'రెండు ఫోన్ నంబర్లు',
     deletePwLbl: 'నిర్ధారించడానికి మీ పాస్‌వర్డ్ నమోదు చేయండి:',
+    deleteGoogleLbl: 'తొలగించడాన్ని Googleతో నిర్ధారించండి:',
     deleteCancel: 'రద్దు చేయి',
     deleteGo: 'శాశ్వతంగా తొలగించు',
     deleteDone: 'మీ ఖాతా తొలగించబడింది.'
@@ -502,6 +504,7 @@ const UI = {
     deleteItemAlerts: 'Every past alert',
     deleteItemPhones: 'Both phone numbers',
     deletePwLbl: 'Enter your password to confirm:',
+    deleteGoogleLbl: 'Confirm with Google to delete this account:',
     deleteCancel: 'Cancel',
     deleteGo: 'Delete forever',
     deleteDone: 'Your account has been deleted.'

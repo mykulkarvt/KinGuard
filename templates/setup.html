@@ -29,6 +29,10 @@ let cfg = {};
 let lang = 'en';
 let delOpen = false;   // is the delete-account confirmation showing?
 let acctEmail = '';    // shown in the confirmation so you can see which account
+// An account created through Google has no password, so the delete
+// confirmation asks it to prove itself with Google instead.
+let hasPassword = true;
+let googleClientId = '';
 // If editing an existing pair, its token is in the URL; otherwise this is a new pair.
 let pair = (new URLSearchParams(location.search).get('id')||'').replace(/[^A-Za-z0-9_-]/g,'');
 
@@ -38,7 +42,9 @@ async function init(){
        (cfg.conditions||[]).forEach(c=>{if(c)conds.add(c);});
        lang = langOf(cfg); }catch(e){}
   try{ const me = await (await fetch('/api/me')).json();
-       acctEmail = me.email || ''; }catch(e){}
+       acctEmail = me.email || '';
+       hasPassword = me.has_password !== false;
+       googleClientId = me.google_client_id || ''; }catch(e){}
   render();
 }
 
@@ -129,12 +135,14 @@ function deleteHTML(U){
       <li>${U.deleteItemAlerts}</li>
       <li>${U.deleteItemPhones}</li>
     </ul>
-    <label class="fld">${U.deletePwLbl}
+    ${hasPassword ? `<label class="fld">${U.deletePwLbl}
       <input id="dpw" type="password" autocomplete="off" autocorrect="off"
-             autocapitalize="off" spellcheck="false"></label>
+             autocapitalize="off" spellcheck="false"></label>`
+      : `<div class="fld" style="border:none;padding:0">${U.deleteGoogleLbl}</div>
+         <div id="gdel" class="gwrap" style="margin-top:10px"></div>`}
     <div class="drow">
       <button class="dcancel" onclick="cancelDelete()">${U.deleteCancel}</button>
-      <button class="dgo" onclick="doDelete()">${U.deleteGo}</button>
+      ${hasPassword ? `<button class="dgo" onclick="doDelete()">${U.deleteGo}</button>` : ''}
     </div>
     <div class="derr" id="derr"></div>
   </div>`;
@@ -155,10 +163,36 @@ async function logout(){
 function askDelete(){
   readInputs(); delOpen = true; render();
   const el = document.getElementById('dpw'); if(el) el.focus();
+  // A Google-only account confirms by signing in again rather than typing a
+  // password, so Google's own button is the confirm button here.
+  if(!hasPassword) renderGoogleDeleteButton();
 }
+
+// Google's script is fetched only when a passwordless account actually opens
+// the delete box, so the ordinary Setup page loads nothing extra.
+function renderGoogleDeleteButton(){
+  const box = document.getElementById('gdel');
+  if(!box || !googleClientId) return;
+  if(window.google && google.accounts && google.accounts.id){
+    google.accounts.id.initialize({client_id: googleClientId, callback: onGoogleDeleteCredential});
+    google.accounts.id.renderButton(box, {theme:'outline', size:'large', width:260, shape:'pill'});
+    return;
+  }
+  if(document.getElementById('gsi-script')) return;   // already loading
+  const s = document.createElement('script');
+  s.id = 'gsi-script';
+  s.src = 'https://accounts.google.com/gsi/client';
+  s.async = true; s.defer = true;
+  s.onload = renderGoogleDeleteButton;
+  document.head.appendChild(s);
+}
+
+// Google handed back a fresh token for whoever just signed in. The server
+// checks it is the SAME Google account before deleting anything.
+function onGoogleDeleteCredential(res){ doDelete(res && res.credential); }
 function cancelDelete(){ readInputs(); delOpen = false; render(); }
 
-async function doDelete(){
+async function doDelete(googleCredential){
   const pw  = (document.getElementById('dpw')||{}).value || '';
   const err = document.getElementById('derr');
   const go  = document.querySelector('.dgo');
@@ -167,7 +201,7 @@ async function doDelete(){
   try{
     const r = await fetch('/api/account',{method:'DELETE',
       headers:{'Content-Type':'application/json','X-CSRF-Token':csrfHeader()},
-      body:JSON.stringify({password:pw})});
+      body:JSON.stringify({password:pw, credential:googleCredential||''})});
     if(r.ok){ location.href = '/login?deleted=1'; return; }
     const j = await r.json().catch(()=>({}));
     if(err) err.textContent = j.error || 'Could not delete the account.';

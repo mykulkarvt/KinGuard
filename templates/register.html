@@ -24,6 +24,10 @@
       <input id="pw" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
     <button class="listen" style="margin-top:8px" onclick="doRegister()">Create account</button>
     <div id="msg"></div>
+    {% if google_client_id %}
+    <div class="orline"><span>or</span></div>
+    <div id="gbtn" class="gwrap"></div>
+    {% endif %}
     <div style="text-align:center;margin-top:18px;font-weight:600;color:#8a8478">
       Already have an account? <a href="/login" style="color:#0A4E43;font-weight:800">Log in</a></div>
   </div>
@@ -45,5 +49,30 @@ async function doRegister(){
 }
 document.addEventListener('keydown',e=>{ if(e.key==='Enter') doRegister(); });
 </script>
+{% if google_client_id %}
+<script>
+// Same endpoint as the login page: /api/auth/google creates the account if the
+// Google identity is new and signs in if it is not, so "sign up" and "sign in"
+// are the same call and a returning user can never accidentally duplicate
+// themselves.
+async function onGoogleCredential(res){
+  document.getElementById('msg').textContent='';
+  try{
+    const r=await fetch('/api/auth/google',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({credential:res.credential})});
+    const j=await r.json().catch(()=>({}));
+    if(r.ok){ location.href='/setup'; return; }
+    err(j.error||'Could not sign in with Google.');
+  }catch(e){ err('Network error — please try again.'); }
+}
+function onGoogleLoad(){
+  if(!window.google||!google.accounts||!google.accounts.id) return;
+  google.accounts.id.initialize({client_id:{{ google_client_id|tojson }},callback:onGoogleCredential});
+  google.accounts.id.renderButton(document.getElementById('gbtn'),
+    {theme:'outline',size:'large',width:280,text:'signup_with',shape:'pill'});
+}
+</script>
+<script src="https://accounts.google.com/gsi/client" async defer onload="onGoogleLoad()"></script>
+{% endif %}
 </body>
 </html>

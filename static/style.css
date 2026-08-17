@@ -56,6 +56,13 @@ header.fam{background:var(--teal-dark);}
 .listen:active{transform:translateY(4px);box-shadow:var(--shadow-press);}
 .listen.speaking{background:var(--amber);color:#3a2c08;}
 
+/* "or" divider between the password form and the Google button */
+.orline{display:flex;align-items:center;gap:12px;margin:20px 0 16px;color:#9a9387;
+  font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+.orline::before,.orline::after{content:"";flex:1;height:1px;background:#E3DACA;}
+/* Google renders its own button into this box; just centre whatever it makes. */
+.gwrap{display:flex;justify-content:center;min-height:44px;}
+
 /* Shown on iPhone in place of the alerts button, which iOS hides until the
    app is installed to the Home Screen. */
 .ioshint{margin-top:18px;background:var(--teal-soft);border:2px solid #BFE0D6;border-radius:18px;
