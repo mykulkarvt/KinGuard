@@ -11,6 +11,8 @@
 <meta name="theme-color" content="#0F6B5C">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 </head>
 <body>
 <div class="phone">
@@ -65,6 +67,23 @@ async function loadCfg(){
 let pushReady=false;      // this device has already subscribed + granted permission
 let pushBackend=false;    // the server supports push (false on hosts that block it)
 function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
+
+// iOS exposes Push only inside a Home Screen app — in an ordinary Safari tab
+// PushManager is simply absent, so pushSupported() is false and the button
+// below renders nothing at all. Without this the family member on an iPhone
+// sees no alerts option and no reason why, and concludes the app can't do
+// notifications. Detect that one case and explain the fix instead.
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+         // iPadOS 13+ reports itself as a Mac; touch points give it away.
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+function isStandalone(){
+  return window.navigator.standalone === true ||
+         window.matchMedia('(display-mode: standalone)').matches;
+}
+// Only nag when installing would actually change the outcome.
+function needsIosInstall(){ return isIOS() && !isStandalone() && !pushSupported(); }
 
 function urlB64ToUint8(b64){
   const pad='='.repeat((4-b64.length%4)%4);
@@ -137,7 +156,8 @@ function lockHTML(){
         <span style="font-size:14px;font-weight:600">${fmt(U.seniorSafe,{senior})}</span></div>
       <div style="text-align:center;font-size:13.5px;color:#9a9387;font-weight:600">
         ${fmt(U.pressHint,{senior})}</div>
-      ${(pushSupported() && pushBackend) ? `<button id="pushBtn" class="listen" style="margin-top:18px" onclick="enablePush()">${pushReady?U.alertsOn:U.enableAlerts}</button>` : ''}
+      ${(pushSupported() && pushBackend) ? `<button id="pushBtn" class="listen" style="margin-top:18px" onclick="enablePush()">${pushReady?U.alertsOn:U.enableAlerts}</button>`
+        : (needsIosInstall() ? `<div class="ioshint">${esc(U.iosInstall)}</div>` : '')}
     </div>`;
   }
   return `<div class="lockwrap">

@@ -55,6 +55,11 @@ header.fam{background:var(--teal-dark);}
   justify-content:center;gap:10px;margin:6px 0 14px;box-shadow:var(--shadow);transition:.06s;}
 .listen:active{transform:translateY(4px);box-shadow:var(--shadow-press);}
 .listen.speaking{background:var(--amber);color:#3a2c08;}
+
+/* Shown on iPhone in place of the alerts button, which iOS hides until the
+   app is installed to the Home Screen. */
+.ioshint{margin-top:18px;background:var(--teal-soft);border:2px solid #BFE0D6;border-radius:18px;
+  padding:16px 18px;font-size:15.5px;font-weight:600;color:#3f5f57;line-height:1.45;text-align:left;}
 a.callbtn{text-decoration:none;display:flex;align-items:center;justify-content:center;gap:12px;
   background:var(--teal-dark);color:#fff;border-radius:18px;padding:20px;font-size:21px;font-weight:800;
   box-shadow:var(--shadow);margin-bottom:14px;}

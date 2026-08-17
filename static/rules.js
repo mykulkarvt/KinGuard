@@ -272,6 +272,7 @@ const UI = {
     alertsOn: '🔔 सूचनाएँ चालू हैं',
     alertsBlocked: 'सूचना की अनुमति नहीं मिली — फ़ोन की सेटिंग में अनुमति दें।',
     alertsFail: 'सूचनाएँ चालू नहीं हो सकीं।',
+    iosInstall: '📲 iPhone पर सूचनाएँ तभी काम करती हैं जब KinGuard होम स्क्रीन पर हो। Share दबाएँ, फिर “Add to Home Screen” चुनें, और KinGuard को वहीं से खोलें। यह पेज खुला रहने पर सूचनाएँ यहाँ दिखती रहेंगी।',
     // setup
     whichPhone: 'कौन-सा फ़ोन किसका?',
     seniorNameLbl: 'बुज़ुर्ग का नाम',
@@ -368,6 +369,7 @@ const UI = {
     alertsOn: '🔔 సూచనలు ఆన్‌లో ఉన్నాయి',
     alertsBlocked: 'సూచన అనుమతి లేదు — ఫోన్ సెట్టింగ్‌లో అనుమతి ఇవ్వండి.',
     alertsFail: 'సూచనలు ఆన్ కాలేకపోయాయి.',
+    iosInstall: '📲 iPhoneలో KinGuard హోమ్ స్క్రీన్‌లో ఉంటేనే సూచనలు పని చేస్తాయి. Share నొక్కి, “Add to Home Screen” ఎంచుకోండి, KinGuard‌ను అక్కడి నుండే తెరవండి. ఈ పేజీ తెరిచి ఉన్నంత వరకు సూచనలు ఇక్కడ కనిపిస్తాయి.',
     // setup
     whichPhone: 'ఏ ఫోన్ ఎవరిది?',
     seniorNameLbl: 'పెద్దవారి పేరు',
@@ -464,6 +466,7 @@ const UI = {
     alertsOn: '🔔 Alerts are on',
     alertsBlocked: 'Notification permission denied — allow it in your phone settings.',
     alertsFail: 'Could not turn on alerts.',
+    iosInstall: '📲 On iPhone, alerts only work once KinGuard is on your Home Screen. Tap Share, then “Add to Home Screen”, and open KinGuard from there. This page still shows alerts while it is open.',
     // setup
     whichPhone: 'Which phone is whose?',
     seniorNameLbl: 'Elder’s name',
