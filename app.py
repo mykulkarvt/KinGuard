@@ -67,11 +67,6 @@ MAX_PHONE_LEN = 25
 MAX_EMAIL_LEN = 120
 MIN_PASSWORD_LEN = 8
 
-# Whose account may read the aggregate stats. Unset (the default) means nobody
-# can, so the route is closed on any deployment that has not named an owner —
-# it reports across every family, so it must never be open by accident.
-ADMIN_EMAIL = os.environ.get("KINGUARD_ADMIN_EMAIL", "").strip().lower()
-
 
 # ---------- phone-number encryption at rest ----------
 # Phone numbers are personal data, so they are encrypted before being written to
@@ -870,49 +865,6 @@ def list_alerts():
         return jsonify(alert=None)
     return jsonify(alert={"id": row["id"], "rule": row["rule"],
                           "created_at": row["created_at"]})
-
-
-def is_admin():
-    return bool(ADMIN_EMAIL) and (g.account["email"] or "").lower() == ADMIN_EMAIL
-
-
-@app.route("/api/stats")
-@api_login_required
-def stats():
-    """Aggregate counts across every family. Owner account only.
-
-    Counts only — no emails, no names, no phone numbers, nothing that
-    identifies a family. It answers "how many, and on what", which is what an
-    application or a competition entry actually needs.
-    """
-    if not is_admin():
-        return jsonify(error="not found"), 404
-    with closing(get_db()) as con:
-        one = lambda q, *a: con.execute(q, a).fetchone()[0]
-        rows = lambda q: [dict(r) for r in con.execute(q).fetchall()]
-        return jsonify(
-            accounts=one("SELECT COUNT(*) FROM accounts"),
-            pairs=one("SELECT COUNT(*) FROM settings"),
-            linked_phones=one(
-                "SELECT COUNT(*) FROM senior_devices WHERE revoked_at IS NULL"),
-            alerts_total=one("SELECT COUNT(*) FROM alerts"),
-            alerts_resolved=one("SELECT COUNT(*) FROM alerts WHERE status='resolved'"),
-            push_subs=one("SELECT COUNT(*) FROM push_subs"),
-            # The whole point of the platform column: Play reports Android,
-            # nothing reports iPhone.
-            by_platform=rows(
-                "SELECT COALESCE(platform,'unknown') AS platform, COUNT(*) AS n "
-                "FROM accounts GROUP BY 1 ORDER BY n DESC"),
-            installed=one("SELECT COUNT(*) FROM accounts WHERE installed_at IS NOT NULL"),
-            ios_installed=one(
-                "SELECT COUNT(*) FROM accounts "
-                "WHERE platform='ios' AND installed_at IS NOT NULL"),
-            by_rule=rows(
-                "SELECT rule, COUNT(*) AS n FROM alerts GROUP BY 1 ORDER BY n DESC"),
-            by_lang=rows(
-                "SELECT COALESCE(lang,'?') AS lang, COUNT(*) AS n "
-                "FROM settings GROUP BY 1 ORDER BY n DESC"),
-        )
 
 
 ALLOWED_PLATFORMS = {"ios", "android", "other"}
