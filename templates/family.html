@@ -272,9 +272,12 @@ function done_(){alertObj=null;aView='lock';render();}
     CSRF=me.csrf||CSRF;
     if(me.pairs && me.pairs.length){ PAIR=me.pairs[0].pair; }
   }catch(e){}
+  // Before the no-pair early return below: someone who has registered but not
+  // finished setup is still a family on an iPhone, and is exactly the person
+  // most worth counting when the question is whether onboarding is working.
+  reportDevice();   // fire-and-forget; never blocks the screen
   if(!PAIR){ renderNoPair(); return; }
   await loadCfg(); await refreshPushState(); render(); poll(); setInterval(poll,3000);
-  reportDevice();   // after CSRF is known; fire-and-forget, never blocks the screen
 })();
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
