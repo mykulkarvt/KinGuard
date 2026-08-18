@@ -67,6 +67,12 @@ MAX_PHONE_LEN = 25
 MAX_EMAIL_LEN = 120
 MIN_PASSWORD_LEN = 8
 
+# Which account may see /stats. It reports across every family, so it must
+# never be open by accident: unset means nobody sees numbers. Unlike a blanket
+# 404, an unset value tells the logged-in user how to configure it, which is
+# not sensitive and saves guessing at why the page is empty.
+ADMIN_EMAIL = os.environ.get("KINGUARD_ADMIN_EMAIL", "").strip().lower()
+
 
 # ---------- phone-number encryption at rest ----------
 # Phone numbers are personal data, so they are encrypted before being written to
@@ -594,6 +600,53 @@ def assetlinks():
     # be added to the array.
     return send_from_directory(app.static_folder, "assetlinks.json",
                                mimetype="application/json")
+
+
+def collect_stats(con):
+    """Counts only. No emails, names or phone numbers ever leave this function."""
+    one = lambda q, *a: con.execute(q, a).fetchone()[0]
+    rows = lambda q: [dict(r) for r in con.execute(q).fetchall()]
+    family_phones = one("SELECT COUNT(*) FROM accounts")
+    # Real linked elder phones, not an assumed second handset per family. A
+    # family may not have finished setup, and an elder is often on Android
+    # while the family member is on iPhone, so doubling would be wrong in both
+    # directions.
+    elder_phones = one(
+        "SELECT COUNT(*) FROM senior_devices WHERE revoked_at IS NULL")
+    return dict(
+        families=family_phones,
+        pairs=one("SELECT COUNT(*) FROM settings"),
+        elder_phones=elder_phones,
+        phones_total=family_phones + elder_phones,
+        seen=one("SELECT COUNT(*) FROM accounts WHERE platform IS NOT NULL"),
+        installed=one("SELECT COUNT(*) FROM accounts WHERE installed_at IS NOT NULL"),
+        ios=one("SELECT COUNT(*) FROM accounts WHERE platform='ios'"),
+        ios_installed=one("SELECT COUNT(*) FROM accounts "
+                          "WHERE platform='ios' AND installed_at IS NOT NULL"),
+        android=one("SELECT COUNT(*) FROM accounts WHERE platform='android'"),
+        alerts=one("SELECT COUNT(*) FROM alerts"),
+        alerts_resolved=one("SELECT COUNT(*) FROM alerts WHERE status='resolved'"),
+        push_subs=one("SELECT COUNT(*) FROM push_subs"),
+        by_platform=rows("SELECT COALESCE(platform,'not seen yet') AS k, COUNT(*) AS n "
+                         "FROM accounts GROUP BY 1 ORDER BY n DESC"),
+        by_rule=rows("SELECT rule AS k, COUNT(*) AS n FROM alerts GROUP BY 1 ORDER BY n DESC"),
+        by_lang=rows("SELECT COALESCE(lang,'?') AS k, COUNT(*) AS n "
+                     "FROM settings GROUP BY 1 ORDER BY n DESC"),
+    )
+
+
+@app.route("/stats")
+@login_required
+def stats_page():
+    if not ADMIN_EMAIL:
+        return render_template("stats.html", unconfigured=True, s=None)
+    # login_required gates the page but does not put the row on g — only
+    # api_login_required does that — so read the account directly here.
+    acct = current_account()
+    if acct is None or (acct["email"] or "").lower() != ADMIN_EMAIL:
+        return redirect("/family")
+    with closing(get_db()) as con:
+        return render_template("stats.html", unconfigured=False, s=collect_stats(con))
 
 
 @app.route("/how-it-works")
