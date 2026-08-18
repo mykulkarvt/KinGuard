@@ -57,12 +57,20 @@ DEFAULT_LANG = "en"
 
 # An alert older than this (seconds) is treated as stale and stops showing.
 ALERT_TTL_SECONDS = 600  # 10 minutes
+# Most recent alerts returned by /api/history. Nothing prunes the alerts
+# table, so the list is capped; the total count returned alongside is not.
+HISTORY_LIMIT = 50
 
 # Upper bounds so a malformed or oversized payload can never bloat a row.
 MAX_NAME_LEN = 80
 MAX_PHONE_LEN = 25
 MAX_EMAIL_LEN = 120
 MIN_PASSWORD_LEN = 8
+
+# Whose account may read the aggregate stats. Unset (the default) means nobody
+# can, so the route is closed on any deployment that has not named an owner —
+# it reports across every family, so it must never be open by accident.
+ADMIN_EMAIL = os.environ.get("KINGUARD_ADMIN_EMAIL", "").strip().lower()
 
 
 # ---------- phone-number encryption at rest ----------
@@ -183,6 +191,18 @@ def init_db():
                    created_at      INTEGER NOT NULL
                )"""
         )
+
+        # --- how this family member reaches KinGuard ---
+        # Play reports Android installs; iPhone installs are invisible, because
+        # iOS fires no install event at all — Safari has no appinstalled. The
+        # closest honest signal is that the app was LAUNCHED from the Home
+        # Screen, which the browser already reports. Stored on the account so
+        # one person counts once however often they open it, and so deleting
+        # the account takes it too.
+        if not _has_col(con, "accounts", "platform"):
+            con.execute("ALTER TABLE accounts ADD COLUMN platform TEXT")
+        if not _has_col(con, "accounts", "installed_at"):
+            con.execute("ALTER TABLE accounts ADD COLUMN installed_at INTEGER")
 
         # --- alerts: one stream per pair ---
         con.execute(
@@ -850,6 +870,112 @@ def list_alerts():
         return jsonify(alert=None)
     return jsonify(alert={"id": row["id"], "rule": row["rule"],
                           "created_at": row["created_at"]})
+
+
+def is_admin():
+    return bool(ADMIN_EMAIL) and (g.account["email"] or "").lower() == ADMIN_EMAIL
+
+
+@app.route("/api/stats")
+@api_login_required
+def stats():
+    """Aggregate counts across every family. Owner account only.
+
+    Counts only — no emails, no names, no phone numbers, nothing that
+    identifies a family. It answers "how many, and on what", which is what an
+    application or a competition entry actually needs.
+    """
+    if not is_admin():
+        return jsonify(error="not found"), 404
+    with closing(get_db()) as con:
+        one = lambda q, *a: con.execute(q, a).fetchone()[0]
+        rows = lambda q: [dict(r) for r in con.execute(q).fetchall()]
+        return jsonify(
+            accounts=one("SELECT COUNT(*) FROM accounts"),
+            pairs=one("SELECT COUNT(*) FROM settings"),
+            linked_phones=one(
+                "SELECT COUNT(*) FROM senior_devices WHERE revoked_at IS NULL"),
+            alerts_total=one("SELECT COUNT(*) FROM alerts"),
+            alerts_resolved=one("SELECT COUNT(*) FROM alerts WHERE status='resolved'"),
+            push_subs=one("SELECT COUNT(*) FROM push_subs"),
+            # The whole point of the platform column: Play reports Android,
+            # nothing reports iPhone.
+            by_platform=rows(
+                "SELECT COALESCE(platform,'unknown') AS platform, COUNT(*) AS n "
+                "FROM accounts GROUP BY 1 ORDER BY n DESC"),
+            installed=one("SELECT COUNT(*) FROM accounts WHERE installed_at IS NOT NULL"),
+            ios_installed=one(
+                "SELECT COUNT(*) FROM accounts "
+                "WHERE platform='ios' AND installed_at IS NOT NULL"),
+            by_rule=rows(
+                "SELECT rule, COUNT(*) AS n FROM alerts GROUP BY 1 ORDER BY n DESC"),
+            by_lang=rows(
+                "SELECT COALESCE(lang,'?') AS lang, COUNT(*) AS n "
+                "FROM settings GROUP BY 1 ORDER BY n DESC"),
+        )
+
+
+ALLOWED_PLATFORMS = {"ios", "android", "other"}
+
+
+@app.route("/api/device", methods=["POST"])
+@api_login_required
+def record_device():
+    """Record what this family member opens KinGuard on.
+
+    Deliberately narrow: one of three platform words, and a first-seen
+    timestamp for the Home Screen launch. No user agent string is kept, no
+    device id, nothing that identifies a handset — only enough to answer "how
+    many families are on iPhone, and how many of those installed it".
+
+    installed_at is written once and never overwritten, so it means "first
+    launched from the Home Screen", not "last seen".
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    platform = data.get("platform")
+    if platform not in ALLOWED_PLATFORMS:
+        platform = "other"
+    standalone = bool(data.get("standalone"))
+    with closing(get_db()) as con, con:
+        con.execute("UPDATE accounts SET platform=? WHERE id=?",
+                    (platform, g.account["id"]))
+        if standalone:
+            con.execute(
+                "UPDATE accounts SET installed_at=? WHERE id=? AND installed_at IS NULL",
+                (int(time.time()), g.account["id"]))
+    return jsonify(ok=True)
+
+
+@app.route("/api/history")
+@api_login_required
+def alert_history():
+    """Past alerts for one pair, newest first.
+
+    Nothing new is stored for this: resolving an alert has always been an
+    UPDATE to status='resolved', never a delete, so the whole history was
+    already sitting in the table with nothing reading it. /api/alerts
+    deliberately returns only the current live alert, which is why the family
+    screen looked like alerts vanished.
+
+    Capped rather than paginated: nothing prunes this table, so a long-running
+    pair would otherwise grow an unbounded response. HISTORY_LIMIT is generous
+    enough that no real family hits it, and the count below is unbounded so the
+    total stays honest even when the list is trimmed.
+    """
+    pair = req_pair()
+    with closing(get_db()) as con:
+        if not pair or not own_pair(con, g.account["id"], pair):
+            return jsonify(alerts=[], total=0)
+        rows = con.execute(
+            "SELECT id, rule, created_at, status, resolved_at FROM alerts "
+            "WHERE pair=? ORDER BY id DESC LIMIT ?",
+            (pair, HISTORY_LIMIT)).fetchall()
+        total = con.execute(
+            "SELECT COUNT(*) FROM alerts WHERE pair=?", (pair,)).fetchone()[0]
+    return jsonify(total=total, alerts=[
+        {"id": r["id"], "rule": r["rule"], "created_at": r["created_at"],
+         "status": r["status"], "resolved_at": r["resolved_at"]}
+        for r in rows])
 
 
 @app.route("/api/resolve", methods=["POST"])

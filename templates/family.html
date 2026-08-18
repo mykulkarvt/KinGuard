@@ -65,6 +65,7 @@ async function loadCfg(){
 }
 
 // ---- Web Push: let the family be alerted even when this app is closed ----
+let histOpen=false, hist=null;   // past-alerts panel: closed until asked for
 let pushReady=false;      // this device has already subscribed + granted permission
 let pushBackend=false;    // the server supports push (false on hosts that block it)
 function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
@@ -85,6 +86,19 @@ function isStandalone(){
 }
 // Only nag when installing would actually change the outcome.
 function needsIosInstall(){ return isIOS() && !isStandalone() && !pushSupported(); }
+
+// Tell the server which kind of phone this is, and whether KinGuard was opened
+// from the Home Screen. Play reports Android installs; iPhone installs are
+// otherwise invisible, because iOS fires no install event at all. Reuses the
+// detection above rather than sniffing anything new, and sends three fixed
+// words — never the user agent string.
+function reportDevice(){
+  const platform = isIOS() ? 'ios'
+                 : (/Android/.test(navigator.userAgent) ? 'android' : 'other');
+  fetch('/api/device',{method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},
+    body:JSON.stringify({platform, standalone:isStandalone()})}).catch(()=>{});
+}
 
 function urlB64ToUint8(b64){
   const pad='='.repeat((4-b64.length%4)%4);
@@ -159,6 +173,7 @@ function lockHTML(){
         ${fmt(U.pressHint,{senior})}</div>
       ${(pushSupported() && pushBackend) ? `<button id="pushBtn" class="listen" style="margin-top:18px" onclick="enablePush()">${pushReady?U.alertsOn:U.enableAlerts}</button>`
         : (needsIosInstall() ? `<div class="ioshint">${esc(U.iosInstall)}</div>` : '')}
+      ${histHTML()}
     </div>`;
   }
   return `<div class="lockwrap">
@@ -170,6 +185,44 @@ function lockHTML(){
     </div></div>`;
 }
 function open_(){aView='detail';render();}
+
+// Past alerts. Loaded only when opened — the family screen polls every three
+// seconds and there is no reason to carry history in that loop.
+async function toggleHistory(){
+  histOpen = !histOpen;
+  render();
+  if(histOpen && hist===null){
+    try{
+      const r = await fetch(api('/api/history'));
+      hist = r.ok ? await r.json() : {alerts:[],total:0};
+    }catch(e){ hist = {alerts:[],total:0}; }
+    render();
+  }
+}
+
+function histHTML(){
+  if(!histOpen) return `<button class="histbtn" onclick="toggleHistory()">${U.histShow}</button>`;
+  if(hist===null) return `<button class="histbtn" onclick="toggleHistory()">${U.histLoading}</button>`;
+  if(!hist.alerts.length)
+    return `<button class="histbtn" onclick="toggleHistory()">${U.histHide}</button>
+      <div class="histnone">${U.histEmpty}</div>`;
+  const rows = hist.alerts.map(a=>{
+    const r = R[a.rule] || {};
+    const d = new Date(a.created_at*1000);
+    const when = d.getDate()+'/'+(d.getMonth()+1)+' '+fmtTime(a.created_at);
+    const live = a.status!=='resolved';
+    return `<div class="hrow">
+      <span class="hic" aria-hidden="true">${r.icon||'⚠️'}</span>
+      <span class="htx"><span class="hlbl">${esc((r.label||a.rule)).slice(0,44)}</span>
+        <span class="hwhen">${when}</span></span>
+      <span class="hst ${live?'live':''}">${live?U.histActive:U.histResolved}</span>
+    </div>`;
+  }).join('');
+  const more = hist.total>hist.alerts.length
+    ? `<div class="histnone">${fmt(U.histMore,{n:hist.total})}</div>` : '';
+  return `<button class="histbtn" onclick="toggleHistory()">${U.histHide}</button>
+    <div class="histwrap">${rows}${more}</div>`;
+}
 
 function detailHTML(){
   const r=R[alertObj.rule];
@@ -221,6 +274,7 @@ function done_(){alertObj=null;aView='lock';render();}
   }catch(e){}
   if(!PAIR){ renderNoPair(); return; }
   await loadCfg(); await refreshPushState(); render(); poll(); setInterval(poll,3000);
+  reportDevice();   // after CSRF is known; fire-and-forget, never blocks the screen
 })();
 </script>
 <script>if("serviceWorker" in navigator){window.addEventListener("load",function(){navigator.serviceWorker.register("/sw.js").catch(function(){});});}</script>
