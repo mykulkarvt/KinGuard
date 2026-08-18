@@ -52,7 +52,7 @@ DEVICE_COOKIE = "kg_device"          # senior device token lives here (HttpOnly)
 VALID_RULES = {"police", "transfer", "voice", "link", "prize", "panic"}
 ALLOWED_CONDITIONS = {"hearing", "vision", "tremor", "memory"}
 # Languages the UI is translated into (see static/rules.js). 'en' is the default.
-ALLOWED_LANGS = {"hi", "te", "en"}
+ALLOWED_LANGS = {"hi", "te", "kn", "ta", "en"}
 DEFAULT_LANG = "en"
 
 # An alert older than this (seconds) is treated as stale and stops showing.
