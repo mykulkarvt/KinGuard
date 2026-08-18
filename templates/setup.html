@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 <meta name="theme-color" content="#0F6B5C">
+<meta name="color-scheme" content="light">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -103,7 +104,7 @@ function render(){
       <input id="fp" type="tel" value="${esc(cfg.family_phone)}" placeholder="${esc(U.familyPhonePh)}"></label>
 
     <div class="divider" style="margin:20px 0 14px">${U.needsDivider}</div>
-    <div style="font-size:14px;color:#8a8478;font-weight:600;margin-bottom:12px">
+    <div style="font-size:14px;color:var(--muted);font-weight:600;margin-bottom:12px">
       ${U.needsHelp}</div>
     <div class="grid">${cards}</div>
 
@@ -191,7 +192,7 @@ function successHTML(V, token){
       <a href="${sLink}" style="color:#0A4E43;font-weight:700;word-break:break-all">${sLink}</a></div>`;
   } else {
     linkBlock = `<div>The senior's link is already active on their phone. Lost it, or want a fresh one?
-      <button class="listen" style="margin-top:10px;width:100%;background:#8a8478" onclick="regenLink()">Get a new senior link</button></div>`;
+      <button class="listen" style="margin-top:10px;width:100%;background:var(--muted)" onclick="regenLink()">Get a new senior link</button></div>`;
   }
   return `<div class="verdict safe" style="margin-top:16px"><span class="vic">✅</span>
     <span><div class="vt" style="font-size:22px">${V.setupDone}</div>

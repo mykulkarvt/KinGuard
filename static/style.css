@@ -1,8 +1,17 @@
 :root{
   --cream:#FBF6EC;--ink:#1F2421;--teal:#0F6B5C;--teal-dark:#0A4E43;--teal-soft:#E3F0EC;
   --red:#C0392B;--red-soft:#FBEAE7;--amber:#E0A93F;--amber-soft:#FCF3DF;
+  /* One muted grey for every hint, caption and footnote. The palette used to
+     carry two near-identical greys that both failed WCAG AA on the cream card
+     (2.83:1 and 3.45:1) and badly on the page ground (1.97:1). This clears AA
+     on all three: 6.81:1 on cream, 4.75:1 on the page, 7.33:1 on white. */
+  --muted:#5C554E;
   --shadow:0 6px 0 rgba(0,0,0,.12);--shadow-press:0 2px 0 rgba(0,0,0,.12);
 }
+/* KinGuard is deliberately one light, high-contrast theme built for older eyes.
+   Without this, Chrome's "Auto dark theme" force-inverts the cream-and-teal
+   palette into low-contrast grey-on-grey — which is exactly what it did. */
+:root{color-scheme:light;}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 body{font-family:'Mukta',sans-serif;background:#D8CFC0;color:var(--ink);min-height:100vh;
   display:flex;align-items:center;justify-content:center;padding:18px;}
@@ -25,7 +34,7 @@ header.fam{background:var(--teal-dark);}
 .panic span.txt{flex:1;}
 .panic .t1{font-size:24px;font-weight:800;line-height:1.15;display:block;}
 .panic .t2{font-size:15px;font-weight:600;opacity:.9;margin-top:2px;display:block;}
-.divider{display:flex;align-items:center;gap:12px;color:#9a9387;font-weight:700;font-size:15px;margin-bottom:15px;}
+.divider{display:flex;align-items:center;gap:12px;color:var(--muted);font-weight:700;font-size:15px;margin-bottom:15px;}
 .divider::before,.divider::after{content:"";flex:1;height:2px;background:#E4DCCD;}
 .grid{display:flex;flex-direction:column;gap:12px;}
 .opt{width:100%;border:none;cursor:pointer;font-family:inherit;background:#fff;border:2px solid #ECE3D2;
@@ -34,7 +43,7 @@ header.fam{background:var(--teal-dark);}
 .opt:active{transform:translateY(3px);box-shadow:0 1px 0 #E4DCCD;border-color:var(--teal);}
 .opt .ic{font-size:33px;line-height:1;flex-shrink:0;width:46px;text-align:center;}
 .opt .lbl{font-size:18px;font-weight:700;line-height:1.25;flex:1;}
-.opt .lbl small{display:block;font-size:13.5px;font-weight:600;color:#8a8478;margin-top:2px;}
+.opt .lbl small{display:block;font-size:13.5px;font-weight:600;color:var(--muted);margin-top:2px;}
 
 .verdict{background:var(--red-soft);border:2px solid #F1C9C2;border-radius:22px;padding:22px 20px;
   display:flex;gap:14px;align-items:flex-start;margin-bottom:18px;}
@@ -100,7 +109,7 @@ a.callbtn.sec{background:#fff;color:var(--teal-dark);border:2px solid var(--teal
 .dconf .dt{font-size:20px;font-weight:800;color:var(--red);line-height:1.2;margin-bottom:12px;}
 .dconf .dw{font-size:16.5px;font-weight:700;line-height:1.35;background:#fff;border:2px solid #F1C9C2;
   border-radius:12px;padding:12px 13px;margin-bottom:14px;}
-.dconf .dk{font-size:13.5px;font-weight:800;letter-spacing:.3px;color:#8a8478;margin-bottom:7px;}
+.dconf .dk{font-size:13.5px;font-weight:800;letter-spacing:.3px;color:var(--muted);margin-bottom:7px;}
 .dconf ul{list-style:none;display:flex;flex-direction:column;gap:6px;}
 .dconf li{font-size:16px;font-weight:700;line-height:1.3;}
 .dconf li:before{content:'•';color:var(--red);margin-right:8px;}
@@ -114,17 +123,17 @@ a.callbtn.sec{background:#fff;color:var(--teal-dark);border:2px solid var(--teal
 
 /* family */
 .lockwrap{flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px;}
-.clock{text-align:center;color:#9a9387;font-weight:700;margin-bottom:6px;}
+.clock{text-align:center;color:var(--muted);font-weight:700;margin-bottom:6px;}
 .clock .big{font-size:46px;font-weight:800;color:#6b6357;line-height:1;}
-.calm{text-align:center;color:#8a8478;font-weight:700;font-size:17px;background:#fff;border:2px solid #ECE3D2;border-radius:18px;padding:22px;}
+.calm{text-align:center;color:var(--muted);font-weight:700;font-size:17px;background:#fff;border:2px solid #ECE3D2;border-radius:18px;padding:22px;}
 .notif{background:#fff;border-radius:22px;padding:18px;border:2px solid #F1C9C2;cursor:pointer;
   display:flex;flex-direction:column;gap:10px;animation:pulse 1.8s infinite;}
 @keyframes pulse{0%,100%{box-shadow:0 10px 24px rgba(192,57,43,.18);}50%{box-shadow:0 10px 34px rgba(192,57,43,.42);}}
 .notif .row{display:flex;align-items:center;gap:10px;}
 .notif .tag{background:var(--red);color:#fff;font-weight:800;font-size:13px;padding:4px 11px;border-radius:999px;}
-.notif .when{margin-left:auto;color:#9a9387;font-weight:700;font-size:14px;}
+.notif .when{margin-left:auto;color:var(--muted);font-weight:700;font-size:14px;}
 .notif .ttl{font-size:21px;font-weight:800;line-height:1.2;}
-.notif .hint{font-size:14.5px;font-weight:600;color:#8a8478;}
+.notif .hint{font-size:14.5px;font-weight:600;color:var(--muted);}
 .who{display:flex;align-items:center;gap:14px;background:var(--red-soft);border:2px solid #F1C9C2;border-radius:22px;
   padding:18px;margin-bottom:16px;}
 .who .av{width:54px;height:54px;border-radius:50%;background:var(--teal);color:#fff;display:flex;
@@ -132,7 +141,7 @@ a.callbtn.sec{background:#fff;color:var(--teal-dark);border:2px solid var(--teal
 .who .wt{font-size:21px;font-weight:800;line-height:1.15;}
 .who .ws{font-size:15px;font-weight:700;color:var(--red);margin-top:3px;}
 .card{background:#fff;border:2px solid #ECE3D2;border-radius:18px;padding:16px;margin-bottom:14px;}
-.card .k{font-size:13.5px;font-weight:800;letter-spacing:.5px;color:#9a9387;margin-bottom:8px;}
+.card .k{font-size:13.5px;font-weight:800;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;}
 .card .reported{display:flex;align-items:center;gap:12px;font-size:19px;font-weight:800;}
 .card .reported .ic{font-size:30px;}
 .card .danger{font-size:16px;font-weight:600;color:#4a4a44;line-height:1.45;margin-top:10px;
@@ -151,7 +160,7 @@ a.callbtn.sec{background:#fff;color:var(--teal-dark);border:2px solid var(--teal
 .resolved .rt{font-size:27px;font-weight:800;color:var(--teal-dark);}
 .resolved .rw{font-size:17px;font-weight:600;color:#5d635e;max-width:300px;line-height:1.45;}
 
-.footnote{text-align:center;font-size:12.5px;color:#9a9387;font-weight:600;padding:10px 20px 16px;border-top:1px solid #EBE3D4;}
+.footnote{text-align:center;font-size:12.5px;color:var(--muted);font-weight:600;padding:10px 20px 16px;border-top:1px solid #EBE3D4;}
 .fade{animation:fade .25s ease;}
 @keyframes fade{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
 
@@ -163,7 +172,7 @@ a.callbtn.sec{background:#fff;color:var(--teal-dark);border:2px solid var(--teal
 .chooser a{display:block;text-decoration:none;border-radius:18px;padding:20px;font-size:20px;font-weight:800;margin-bottom:14px;box-shadow:var(--shadow);}
 .chooser a.s{background:var(--teal);color:#fff;}
 .chooser a.f{background:var(--teal-dark);color:#fff;}
-.chooser small{color:#9a9387;font-weight:600;font-size:13px;}
+.chooser small{color:var(--muted);font-weight:600;font-size:13px;}
 
 /* ============================================================
    ACCESSIBILITY MODES — turned on automatically from onboarding
@@ -211,3 +220,11 @@ body.simple-mode .panic{padding:44px 24px;}
 body.simple-mode .panic .ic{font-size:60px;}
 body.simple-mode .panic .t1{font-size:32px;}
 body.simple-mode .panic .t2{font-size:19px;}
+
+/* Keyboard focus. :focus-visible so a mouse/touch press never shows a ring,
+   but tabbing always does. Amber is used because it stays visible on the
+   cream ground, on white cards, and on the teal and red buttons alike. */
+.listen:focus-visible,.opt:focus-visible,.panic:focus-visible,.dbtn:focus-visible,
+.dgo:focus-visible,.dcancel:focus-visible,a:focus-visible,button:focus-visible,
+select:focus-visible,input:focus-visible{
+  outline:3px solid var(--amber);outline-offset:3px;}

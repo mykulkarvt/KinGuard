@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Mukta:wght@400;600;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/static/style.css">
 <meta name="theme-color" content="#0F6B5C">
+<meta name="color-scheme" content="light">
 <link rel="manifest" href="/static/manifest.json">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -154,7 +155,7 @@ function lockHTML(){
       <div class="clock"><div class="big">${now}</div><div>${U.today}</div></div>
       <div class="calm">${U.calmNoAlert}<br>
         <span style="font-size:14px;font-weight:600">${fmt(U.seniorSafe,{senior})}</span></div>
-      <div style="text-align:center;font-size:13.5px;color:#9a9387;font-weight:600">
+      <div style="text-align:center;font-size:13.5px;color:var(--muted);font-weight:600">
         ${fmt(U.pressHint,{senior})}</div>
       ${(pushSupported() && pushBackend) ? `<button id="pushBtn" class="listen" style="margin-top:18px" onclick="enablePush()">${pushReady?U.alertsOn:U.enableAlerts}</button>`
         : (needsIosInstall() ? `<div class="ioshint">${esc(U.iosInstall)}</div>` : '')}
@@ -201,9 +202,9 @@ function resolvedHTML(){
     <div class="rt">${U.resolvedTitle}</div>
     <div class="rw">${fmt(U.resolvedWhy,{senior})}</div>
     <div style="background:#fff;border:2px solid #ECE3D2;border-radius:16px;padding:14px 16px;margin-top:18px;width:100%;text-align:left">
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.report}</span><span style="color:#8a8478;font-weight:600">${r.label.slice(0,18)}…</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.time}</span><span style="color:#8a8478;font-weight:600">${fmtTime(alertObj.created_at)}</span></div>
-      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.result}</span><span style="color:#8a8478;font-weight:600">${U.noMoneySent}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.report}</span><span style="color:var(--muted);font-weight:600">${r.label.slice(0,18)}…</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.time}</span><span style="color:var(--muted);font-weight:600">${fmtTime(alertObj.created_at)}</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:15px;font-weight:700;padding:5px 0"><span>${U.result}</span><span style="color:var(--muted);font-weight:600">${U.noMoneySent}</span></div>
     </div>
     <button class="back" onclick="done_()">${U.done}</button></div>`;
 }
