@@ -177,7 +177,16 @@ function verdictHTML(id,isPanic){
     <a class="callbtn sec" href="tel:1930"><span aria-hidden="true">☎️</span><span>${U.help1930}</span></a>
     <button class="back" onclick="goHome()">${U.back}</button>`;
 }
-function goHome(){view='home';render();}
+// Stop any speech on the way out. Without this the explanation kept playing
+// after the elder had left the screen, with nothing on screen to stop it —
+// the Back button is deliberately NOT disabled while speaking, because
+// trapping a frightened person on a screen for the 10-15 seconds it takes to
+// read out is worse than the leak it would prevent.
+function goHome(){
+  if('speechSynthesis' in window) speechSynthesis.cancel();
+  view='home';
+  render();
+}
 
 function speak(id){
   if(!('speechSynthesis' in window))return;
