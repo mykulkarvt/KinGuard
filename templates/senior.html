@@ -9,7 +9,11 @@
 <link rel="stylesheet" href="/static/style.css">
 <meta name="theme-color" content="#0F6B5C">
 <meta name="color-scheme" content="light">
-<link rel="manifest" href="/static/manifest.json">
+<!-- The elder phone gets its own manifest, whose start_url carries this
+     device's token; see /senior.webmanifest. crossorigin="use-credentials"
+     is required — a manifest is fetched WITHOUT cookies by default, and
+     without them the server cannot tell which device is asking. -->
+<link rel="manifest" href="/senior.webmanifest" crossorigin="use-credentials">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">

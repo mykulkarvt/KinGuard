@@ -530,7 +530,14 @@ def service_worker():
 
 @app.route("/")
 def index():
-    return redirect("/family" if current_account() else "/login")
+    if current_account():
+        return redirect("/family")
+    # A senior phone has no account and never logs in, so without this it lands
+    # on the login screen — which is exactly what an installed Home Screen app
+    # used to do, since the manifest's start_url is "/".
+    if device_pair():
+        return redirect("/senior")
+    return redirect("/login")
 
 
 @app.route("/login")
@@ -576,6 +583,41 @@ def senior():
                             httponly=True, secure=COOKIE_SECURE, samesite="Lax")
         return resp
     return render_template("senior.html")
+
+
+@app.route("/senior.webmanifest")
+def senior_manifest():
+    """The elder phone's own manifest, with its token in start_url.
+
+    iOS gives a Home Screen app a cookie store separate from Safari, so the
+    kg_device cookie set while pairing in Safari is not there when the
+    installed app launches. The app would open unpaired every time. Putting the
+    token in start_url means the first launch re-pairs the standalone app by
+    the same route the original link used.
+
+    The token is read back out of the request's own cookie, so this only ever
+    hands a device the token it already holds. Served no-store so it is never
+    cached or shared, and it falls back to a plain /senior start_url for an
+    unpaired visitor.
+    """
+    tok = clean_token(request.cookies.get(DEVICE_COOKIE, ""))
+    start = "/senior?t=" + tok if (tok and device_pair()) else "/senior"
+    man = {
+        "name": "KinGuard", "short_name": "KinGuard",
+        "start_url": start, "scope": "/",
+        "display": "standalone", "orientation": "portrait",
+        "background_color": "#D8CFC0", "theme_color": "#0F6B5C",
+        "icons": [
+            {"src": "/static/icon-192.png", "sizes": "192x192",
+             "type": "image/png", "purpose": "any maskable"},
+            {"src": "/static/icon-512.png", "sizes": "512x512",
+             "type": "image/png", "purpose": "any maskable"},
+        ],
+    }
+    resp = jsonify(man)
+    resp.headers["Content-Type"] = "application/manifest+json"
+    resp.headers["Cache-Control"] = "no-store"
+    return resp
 
 
 @app.route("/privacy")
