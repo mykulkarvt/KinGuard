@@ -458,8 +458,16 @@ try:
     from pywebpush import webpush, WebPushException
     from py_vapid import Vapid01
     _PUSH_LIB = True
-except Exception:
+except Exception as _e:
+    # This import failing is how push stayed dead in production for months with
+    # no error anywhere: PUSH_ENABLED went false, so the family screen simply
+    # never rendered the "enable alerts" button and nothing looked broken. Say
+    # so loudly. On PythonAnywhere the usual cause is installing with the
+    # console's Python instead of the web app's — they are different versions.
     _PUSH_LIB = False
+    print("[KinGuard] Web Push DISABLED — cannot import pywebpush/py_vapid: %r. "
+          "Install with the web app's interpreter, e.g. "
+          "python3.10 -m pip install --user pywebpush py-vapid" % (_e,))
 
 if _PUSH_LIB and not (VAPID_PUBLIC and VAPID_PRIVATE):
     try:
@@ -480,8 +488,13 @@ VAPID_SIGNER = None
 if _PUSH_LIB and VAPID_PUBLIC and VAPID_PRIVATE:
     try:
         VAPID_SIGNER = Vapid01.from_string(VAPID_PRIVATE)
-    except Exception:
+    except Exception as _e:
+        # A malformed VAPID_PRIVATE disables push just as completely as a
+        # missing library, and used to do it just as quietly.
         VAPID_SIGNER = None
+        print("[KinGuard] Web Push DISABLED — VAPID_PRIVATE could not be "
+              "loaded (%r). Expect 43 url-safe base64 chars from "
+              "gen_vapid.py." % (_e,))
 PUSH_ENABLED = VAPID_SIGNER is not None
 
 
@@ -506,10 +519,18 @@ def send_push(pair, rule):
                     vapid_claims={"sub": VAPID_SUBJECT}, ttl=120, timeout=10)
         except WebPushException as e:
             code = getattr(getattr(e, "response", None), "status_code", None)
-            if code in (404, 410):
+            # 404/410: the browser dropped the subscription.
+            # 403: it was made against a DIFFERENT VAPID key — rotating the
+            # server keys invalidates every subscription that predates them,
+            # and the row is dead weight until the family re-subscribes.
+            if code in (403, 404, 410):
                 dead.append(s["endpoint"])
-        except Exception:
-            pass
+            # Never silent. A dead push subsystem produced no log line for
+            # months once already; a send that fails must say why.
+            print("[KinGuard] push failed (%s) for %s: %s"
+                  % (code, s["endpoint"][:40], e))
+        except Exception as e:
+            print("[KinGuard] push error for %s: %r" % (s["endpoint"][:40], e))
     if dead:
         with closing(get_db()) as con, con:
             con.executemany("DELETE FROM push_subs WHERE endpoint=?", [(e,) for e in dead])

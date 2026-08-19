@@ -108,6 +108,17 @@ function urlB64ToUint8(b64){
   return arr;
 }
 
+// Does this subscription belong to the key the server is using now?
+// applicationServerKey comes back as an ArrayBuffer; compare it byte for byte.
+function sameKey(sub, wanted){
+  try{
+    const have=new Uint8Array(sub.options.applicationServerKey||[]);
+    if(have.length!==wanted.length) return false;
+    for(let i=0;i<have.length;i++) if(have[i]!==wanted[i]) return false;
+    return true;
+  }catch(e){ return false; }   // can't tell -> assume stale and re-subscribe
+}
+
 async function refreshPushState(){
   if(!pushSupported()) return;
   try{
@@ -128,10 +139,21 @@ async function enablePush(){
     const perm=await Notification.requestPermission();
     if(perm!=='granted'){ if(btn) btn.textContent=U.alertsBlocked; return; }
     const reg=await navigator.serviceWorker.ready;
+    const wanted=urlB64ToUint8(info.public_key);
     let sub=await reg.pushManager.getSubscription();
+    // A subscription is bound for life to the server key it was created with.
+    // If the server's VAPID keys have changed since, this one still looks
+    // healthy to the browser but every send is rejected, silently. Reusing it
+    // unconditionally meant a user in that state could never recover from the
+    // UI — tapping the button just handed the dead subscription back. So
+    // compare keys and re-subscribe when they differ.
+    if(sub && !sameKey(sub, wanted)){
+      try{ await sub.unsubscribe(); }catch(e){}
+      sub=null;
+    }
     if(!sub){
       sub=await reg.pushManager.subscribe({userVisibleOnly:true,
-        applicationServerKey:urlB64ToUint8(info.public_key)});
+        applicationServerKey:wanted});
     }
     await fetch(api('/api/subscribe'),{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':CSRF},
       body:JSON.stringify(sub)});
