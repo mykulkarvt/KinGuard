@@ -1,130 +1,154 @@
-# 🛡️ KinGuard — family-in-the-loop scam protection
+# KinGuard
 
-A scam-protection tool for elderly users — in **Hindi, Telugu, Kannada, Tamil and
-English** — with a **family-in-the-loop** alert and an **accessibility setup** for
-age-related needs.
+Scam protection for elderly parents and grandparents, with a family member in the loop.
 
-When a senior reports a suspicious situation, a calm warning shows on their phone
-*and* an alert appears on a family member's phone over the internet.
+Live at **https://mykit.pythonanywhere.com** · [How it works](https://mykit.pythonanywhere.com/how-it-works)
 
-## What's in it
+## The problem
 
-1. **Setup** (`/setup`) — the family member does this **once**: enters names,
-   phone numbers, picks the **language** (5 supported), and ticks the
-   senior's needs (hard of hearing / low vision / shaky hands / memory). Those
-   needs automatically turn on the right accessibility mode — the senior never
-   has to configure anything.
-2. **Senior's phone** (`/senior`) — a big "I'm scared" button + 5 common scam
-   situations, in the language chosen at setup. Tapping one shows a calm verdict,
-   the steps to take, reads it aloud, and can call family / 1930.
-3. **Family phone** (`/family`) — the moment the senior taps, an alert appears:
-   *what* they reported, *why* it's dangerous, and *what to say to them*, with
-   one tap to call, report, or resolve.
+Scams aimed at older people in India are organised and convincing. Callers
+pretend to be police and threaten a "digital arrest". They ask for money to be
+moved to a "safe account" for verification. They clone a family member's voice
+and beg for help. The victim is isolated on the phone with someone pressuring
+them, and the advice they need is simple: hang up, send nothing, call your
+family. But it is very hard to remember that while it is happening.
 
-## Accessibility modes (set automatically from Setup)
+Most apps try to block scams automatically. That does not work well, because
+the scam happens inside a normal phone call. KinGuard takes a different route:
+it does not try to detect anything. It gives the elder one button, and it
+brings their family into the conversation within seconds.
 
-| Need ticked in Setup | What turns on |
-|----------------------|---------------|
-| 🦻 Hard of hearing   | Phone **vibrates** on alerts (doesn't rely on sound); text always shown |
-| 👓 Low vision        | **Big text**, **high contrast**, and the warning is **read aloud automatically** |
-| ✋ Shaky hands        | **Bigger** text and buttons |
-| 🧠 Memory / confusion | **Simple mode** — only the one big panic button is shown |
+## How it works
 
-Also built in for everyone: screen-reader labels (Android TalkBack), large tap
-targets, single-tap actions (no swipes/long-press), and the family's phone always
-vibrates when an alert comes in.
+There are two phones.
 
-## How to run
+**The elder's phone** shows one large red button and five common scam
+situations. There is no account and no password. They never log in. Tapping a
+situation tells them plainly that it is a scam, what to do right now, and reads
+it aloud if they need that.
+
+**The family member's phone** gets an alert the moment the elder taps. It shows
+what was reported, why it is dangerous, and three specific things to say to
+them, so the family member does not have to think of the words while worried.
+One tap calls the elder. Another reports to 1930, India's cybercrime helpline.
+
+The family member does a five minute setup once, then sends the elder a private
+link. That link pairs the elder's phone for good.
+
+## Languages
+
+The whole app, including the spoken warnings, runs in **Hindi, Telugu, Kannada,
+Tamil and English**. The family member picks the language during setup and the
+elder's phone opens entirely in it.
+
+Adding a language means one entry in `static/rules.js` and nothing else. No
+template changes.
+
+## Accessibility
+
+During setup the family member ticks what the elder finds difficult. The
+elder's phone then opens that way by itself, with nothing for them to configure.
+
+| Ticked in setup | What the elder's phone does |
+|---|---|
+| Hard of hearing | Vibrates on an alert (Android only, see limitations) |
+| Trouble seeing | Large text, high contrast, reads everything aloud |
+| Shaky hands | Even larger buttons |
+| Memory or confusion | Simple mode: one big button, nothing else |
+
+## Privacy and security
+
+- Both phone numbers are **encrypted before being stored**, using Fernet.
+- Passwords are stored only as a hash.
+- Every pair of phones is **owned by one account**, and every settings and
+  alert endpoint checks that ownership, so no account can read another
+  family's data.
+- The elder's phone is authenticated by a **revocable device token** held in an
+  HttpOnly cookie, not by a login. The family can rotate it at any time.
+- **Account deletion is in the app** and removes everything with no copy kept:
+  login, setup, alert history, the elder's link and any notification
+  subscriptions.
+- KinGuard does not read messages, listen to calls, or track location. The
+  elder chooses what to report, by pressing a button.
+
+[Privacy policy](https://mykit.pythonanywhere.com/privacy) ·
+[Deleting your account](https://mykit.pythonanywhere.com/delete-account)
+
+## Running it locally
 
 ```bash
 pip install -r requirements.txt
-python app.py
+python app.py           # http://127.0.0.1:5000
 ```
 
-Then open `http://127.0.0.1:5000/` in your browser. You'll see a **role picker**:
-do **Setup** first (family enters names + language + needs), then each phone picks
-“Senior” or “Family.” The choice is remembered.
+Set these in production. Without them the app still runs, but logins reset on
+restart and stored phone numbers become unreadable.
 
-## Push notifications — alerts even when the app is closed
+| Variable | What it does |
+|---|---|
+| `KINGUARD_SECRET_KEY` | Signs the session cookie |
+| `KINGUARD_DB_KEY` | Fernet key for encrypting phone numbers |
+| `VAPID_PUBLIC` / `VAPID_PRIVATE` | Web Push keys, from `gen_vapid.py` |
+| `VAPID_SUBJECT` | Contact address for the push service |
+| `KINGUARD_ADMIN_EMAIL` | Which account may see `/stats` |
 
-By default the family phone only sees alerts while `/family` is **open** (it
-checks every 3 seconds). Web Push adds a real system notification that arrives
-**even when KinGuard is closed**.
+Rotating `KINGUARD_DB_KEY` makes every stored phone number permanently
+unreadable, and changing the VAPID keys invalidates every existing
+notification subscription.
 
-**The family must turn it on once — and grant permission:**
-1. Open `/family`.
-2. Tap **🔔 “Get alerts even when closed.”**
-3. On the browser prompt, tap **“Allow.”** ← easy to miss; without this, no
-   notifications are delivered.
-4. The button changes to **“Alerts are on.”** From then on, the senior's alerts
-   buzz the family phone even with the app closed.
+## Alerts when the app is closed
 
-What it needs to actually deliver:
-- **HTTPS** *and* a host that can reach the browser's push service. This does
-  work on PythonAnywhere's free tier, whose outbound allowlist covers the push
-  endpoints — but the push libraries must be installed with the **web app's**
-  interpreter, which is not necessarily the one a console gives you.
-- VAPID keys: run `python gen_vapid.py` once and set the printed values as the
-  env vars `VAPID_PUBLIC`, `VAPID_PRIVATE`, `VAPID_SUBJECT` on the host. (With no
-  env vars set, a temporary dev key pair is generated so it's testable locally.)
-- **iPhone:** push only works if the family adds the PWA to the **Home Screen**
-  (iOS 16.4+). Android Chrome works in the browser directly.
-- On a **desktop**, a notification only arrives if the browser is still running
-  (a closed tab is fine; a fully-quit browser may not receive it). The
-  “app fully closed and it still buzzes” experience is the **real-phone** case.
+KinGuard uses Web Push, so an alert reaches the family phone even if the app is
+shut. This needs HTTPS, and the family member has to turn it on once by tapping
+**Get alerts even when closed**.
 
-### Install it as an app (PWA)
-This is now an installable app. On each phone, open the site in Chrome, then
-**menu → Add to Home screen**. It installs with an icon and opens fullscreen
-like a real app. The senior's phone picks “Senior”; the family phone picks
-“Family.” Tap ↻ in the footer to switch roles.
+On iPhone, Apple only allows this for apps added to the Home Screen, and only
+on iOS 16.4 or later. The app detects that case and explains it rather than
+hiding the option with no reason.
 
-**Important for real use:** the senior and family are usually in different homes,
-so the “same Wi-Fi” trick only works for local testing. For two real phones
-anywhere, the server must be **hosted on the public internet** (e.g. PythonAnywhere)
-so both phones can reach it. Then both install the app from that public URL.
+## Installing it
+
+Android users can install from Google Play, where KinGuard is a Trusted Web
+Activity wrapping the live site. Anyone can also install it straight from the
+browser: **Add to Home Screen** on iPhone, or Chrome's install prompt on
+Android. Both give a normal app icon and work offline for the parts that
+matter.
 
 ## Files
 
 | File | What it is |
-|------|------------|
-| `app.py` | Flask server: pages + alert API + settings API + push API, stores data in SQLite |
-| `templates/setup.html` | onboarding (family sets names + language + accessibility) |
-| `templates/senior.html` | the senior's screen (applies accessibility settings) |
-| `templates/family.html` | the family member's screen (polls + push subscribe) |
-| `templates/index.html` | a chooser landing page |
-| `static/rules.js` | all scam rules **and** UI text, per language (5 supported) |
-| `static/style.css` | shared styling + the accessibility modes |
-| `static/manifest.json` | makes it installable as an app (PWA) |
-| `static/sw.js` | service worker — installability, offline shell, **push notifications** (never caches alerts) |
-| `static/icon-192.png`, `icon-512.png` | app icons |
-| `gen_vapid.py` | one-time generator for the Web Push (VAPID) keys |
-| `requirements.txt` / `Procfile` | dependencies + start command for hosting (e.g. Render) |
-| `kinguard.db` | created automatically on first run |
+|---|---|
+| `app.py` | The whole backend: accounts, pairing, alerts, push, encryption |
+| `static/rules.js` | Every scam rule and every piece of UI text, per language |
+| `static/sw.js` | Service worker: offline shell and push notifications |
+| `static/style.css` | All styling, including the accessibility modes |
+| `templates/` | The elder screen, family screen, setup, and public pages |
+| `gen_vapid.py` | Generates the Web Push key pair, run once |
 
-## Honest limitations 
+## Honest limitations
 
-- **The alert needs internet** on both phones. (A no-internet version could send
-  an SMS instead, since SMS uses the cellular network, not data.)
-- **It still needs the senior to tap.** During a live scam call the phone is busy,
-  so a one-tap action is the realistic move — an app can't silently hear the call.
-- **Vibration** works on Android browsers; iPhone Safari ignores it.
-- **The translations are a first draft** — have a fluent speaker review each
-  language (especially Telugu) before relying on it.
-- **Verify the facts** (the 1930 helpline; that "digital arrest" has no legal
-  basis) before relying on them.
-- **Push has to be switched on per family.** In-app polling works anywhere, but
-  alerts-when-closed need HTTPS *and* the family member to tap "Get alerts even
-  when closed" once. Until they do, an alert raised while the app is closed
-  reaches no one — the app looks like it is working and is not.
-- **Push delivery isn't guaranteed when fully offline** — a closed device only
-  gets a queued alert if it comes back within ~2 minutes (the push TTL).
-- Runs under the host's WSGI server in production; `flask run` is for local
-  development only.
+- **There is no password reset.** A family member who forgets their password is
+  locked out, and because deletion re-checks the password, they cannot delete
+  their account either. The host's free tier blocks outbound mail, so this
+  needs either a paid tier or a recovery code at signup. It is the biggest
+  outstanding gap.
+- **Alerts when closed have to be switched on per family.** Until someone taps
+  that button, an alert raised while the app is shut reaches nobody. The app
+  looks like it is working and is not.
+- **Vibration does not work on iPhone.** Safari has no vibration API, so the
+  hard-of-hearing setting does nothing there. Everything else works.
+- **An alert needs internet on both phones.** A version using SMS would work
+  without data, since SMS runs on the cellular network.
+- **The translations need a native speaker's review.** These are safety
+  messages read by a frightened person, and they should not be trusted until
+  checked.
+- **Push delivery is not guaranteed to a device that is fully offline.** A
+  closed phone only receives a queued alert if it reconnects within about two
+  minutes.
 
 ## Possible next steps
 
-- Add an SMS fallback for the offline / no-data case.
-- Add more languages by extending `rules.js` (one dictionary entry per language).
-- A larger text-size slider the senior can adjust themselves.
-- Persist data in Postgres instead of SQLite for hosts with an ephemeral disk.
+- A recovery code issued at signup, so a locked-out user can get back in
+- A practice alert, so a family can see the whole loop work before a real one
+- A pairing code, so the elder's phone can be set up without sending a link
+- SMS fallback for alerts when there is no internet
