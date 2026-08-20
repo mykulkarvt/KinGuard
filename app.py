@@ -1,5 +1,5 @@
 """
-KinGuard — Flask backend with family accounts, onboarding + accessibility.
+KinGuard, Flask backend with family accounts, onboarding + accessibility.
 
 The loop:
   1. Senior taps a situation  -> POST /api/alert   (saved to the database)
@@ -9,7 +9,7 @@ The loop:
 Access model (the security piece):
   - A *family member* has an account (email + password) and logs in. Every pair
     of phones (one senior + one family) is OWNED by an account, and the settings
-    / alert APIs check that ownership — so only the owner can read or change a
+    / alert APIs check that ownership, so only the owner can read or change a
     pair's data.
   - The *senior* never logs in. Their phone holds a long-lived, revocable DEVICE
     TOKEN (delivered once through the family's setup link and then kept in an
@@ -77,7 +77,7 @@ ADMIN_EMAIL = os.environ.get("KINGUARD_ADMIN_EMAIL", "").strip().lower()
 # ---------- phone-number encryption at rest ----------
 # Phone numbers are personal data, so they are encrypted before being written to
 # the database and decrypted only when served back to a caller that is allowed to
-# see them. Provide the key via the KINGUARD_DB_KEY env var in production —
+# see them. Provide the key via the KINGUARD_DB_KEY env var in production -
 # generate one with:
 #   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 # Without a valid key we fall back to a throwaway one so local dev still runs, but
@@ -161,7 +161,7 @@ def new_token(nbytes=16):
 
 def hash_token(tok):
     """One-way hash for storing high-entropy tokens (device tokens). High entropy
-    means a fast hash is safe here — no per-guess slowdown is needed."""
+    means a fast hash is safe here, no per-guess slowdown is needed."""
     return hashlib.sha256((tok or "").encode()).hexdigest()
 
 
@@ -195,7 +195,7 @@ def init_db():
 
         # --- how this family member reaches KinGuard ---
         # Play reports Android installs; iPhone installs are invisible, because
-        # iOS fires no install event at all — Safari has no appinstalled. The
+        # iOS fires no install event at all, Safari has no appinstalled. The
         # closest honest signal is that the app was LAUNCHED from the Home
         # Screen, which the browser already reports. Stored on the account so
         # one person counts once however often they open it, and so deleting
@@ -374,7 +374,7 @@ def _client_key():
     actually received the request from, overwriting anything the caller sent, so
     it is the only value here that cannot be forged. X-Forwarded-For is a
     fallback for other hosts and is client-supplied: its FIRST entry is the
-    claimed client. Never key on the last entry — that is the proxy itself, so
+    claimed client. Never key on the last entry, that is the proxy itself, so
     every visitor would share one bucket and a single attacker could lock out
     the whole site.
     """
@@ -413,7 +413,7 @@ def device_pair():
 
 def issue_senior_token(con, pair):
     """Create a fresh senior device token for a pair (caller handles revoking old
-    ones). Returns the plaintext token — only ever available at creation time."""
+    ones). Returns the plaintext token, only ever available at creation time."""
     tok = new_token(24)
     con.execute(
         "INSERT INTO senior_devices (pair, token_hash, label, created_at) VALUES (?,?,?,?)",
@@ -463,7 +463,7 @@ except Exception as _e:
     # no error anywhere: PUSH_ENABLED went false, so the family screen simply
     # never rendered the "enable alerts" button and nothing looked broken. Say
     # so loudly. On PythonAnywhere the usual cause is installing with the
-    # console's Python instead of the web app's — they are different versions.
+    # console's Python instead of the web app's, they are different versions.
     _PUSH_LIB = False
     print("[KinGuard] Web Push DISABLED — cannot import pywebpush/py_vapid: %r. "
           "Install with the web app's interpreter, e.g. "
@@ -499,7 +499,7 @@ PUSH_ENABLED = VAPID_SIGNER is not None
 
 
 def send_push(pair, rule):
-    """Best-effort Web Push to this pair's family devices. Never raises."""
+    """Send Web Push to this pair's family devices. Never raises."""
     if not PUSH_ENABLED:
         return
     with closing(get_db()) as con:
@@ -520,7 +520,7 @@ def send_push(pair, rule):
         except WebPushException as e:
             code = getattr(getattr(e, "response", None), "status_code", None)
             # 404/410: the browser dropped the subscription.
-            # 403: it was made against a DIFFERENT VAPID key — rotating the
+            # 403: it was made against a DIFFERENT VAPID key, rotating the
             # server keys invalidates every subscription that predates them,
             # and the row is dead weight until the family re-subscribes.
             if code in (403, 404, 410):
@@ -554,7 +554,7 @@ def index():
     if current_account():
         return redirect("/family")
     # A senior phone has no account and never logs in, so without this it lands
-    # on the login screen — which is exactly what an installed Home Screen app
+    # on the login screen, which is exactly what an installed Home Screen app
     # used to do, since the manifest's start_url is "/".
     if device_pair():
         return redirect("/senior")
@@ -643,7 +643,7 @@ def senior_manifest():
 
 @app.route("/privacy")
 def privacy():
-    # Public on purpose: Play requires a privacy policy reachable without an
+    # Must stay public: Play requires a privacy policy reachable without an
     # account, and the Play listing links straight here.
     return render_template("privacy.html")
 
@@ -658,7 +658,7 @@ def assetlinks():
     #
     # The fingerprint must match the certificate Play actually ships the app
     # with. If Play App Signing is enabled, that is the *app signing* key from
-    # Play Console (Setup > App integrity), NOT the upload key — listing only
+    # Play Console (Setup > App integrity), NOT the upload key, listing only
     # the upload key silently fails verification. Extra fingerprints can simply
     # be added to the array.
     return send_from_directory(app.static_folder, "assetlinks.json",
@@ -703,8 +703,8 @@ def collect_stats(con):
 def stats_page():
     if not ADMIN_EMAIL:
         return render_template("stats.html", unconfigured=True, s=None)
-    # login_required gates the page but does not put the row on g — only
-    # api_login_required does that — so read the account directly here.
+    # login_required gates the page but does not put the row on g, only
+    # api_login_required does that, so read the account directly here.
     acct = current_account()
     if acct is None or (acct["email"] or "").lower() != ADMIN_EMAIL:
         return redirect("/family")
@@ -714,7 +714,7 @@ def stats_page():
 
 @app.route("/how-it-works")
 def how_it_works():
-    # Public on purpose: this is the page you send someone BEFORE they have an
+    # Must stay public: this is the page you send someone before they have an
     # account. Everything else on the site is either a form or behind a login,
     # so without this the front door is a bare login screen with no explanation.
     return render_template("how-it-works.html")
@@ -723,7 +723,7 @@ def how_it_works():
 @app.route("/delete-account")
 def delete_account_info():
     # Play requires the account-deletion path to be discoverable from OUTSIDE the
-    # app as well as inside it, so this must stay reachable without logging in —
+    # app as well as inside it, so this must stay reachable without logging in -
     # somebody who cannot get into their account still has to be able to find it.
     # This URL is the one given to Google in the Data Safety form.
     return render_template("delete-account.html")
@@ -801,7 +801,7 @@ def api_delete_account():
     """Permanently delete this account and everything it owns.
 
     Google Play requires a real deletion that the user can start from inside the
-    app — deactivating or freezing an account does not satisfy the policy — so
+    app, deactivating or freezing an account does not satisfy the policy, so
     every row goes here and nothing is kept.
 
     The password is re-checked even though the caller is already logged in. This
@@ -923,7 +923,7 @@ def regen_senior_link():
 # ---------- senior API (device-token) ----------
 @app.route("/api/senior")
 def senior_config():
-    """Minimal config for the senior's phone — never exposes the full settings."""
+    """Minimal config for the senior's phone, never exposes the full settings."""
     pair = device_pair()
     if not pair:
         return jsonify(error="not linked"), 401
@@ -942,7 +942,7 @@ def senior_config():
 @app.route("/api/alert", methods=["POST"])
 def create_alert():
     # Authenticated by the senior device cookie (SameSite=Lax, so it is not sent
-    # on cross-site POSTs — no CSRF token needed).
+    # on cross-site POSTs, no CSRF token needed).
     pair = device_pair()
     if not pair:
         return jsonify(error="not linked"), 401
@@ -991,9 +991,9 @@ ALLOWED_PLATFORMS = {"ios", "android", "other"}
 def record_device():
     """Record what this family member opens KinGuard on.
 
-    Deliberately narrow: one of three platform words, and a first-seen
+    Kept narrow: one of three platform words, and a first-seen
     timestamp for the Home Screen launch. No user agent string is kept, no
-    device id, nothing that identifies a handset — only enough to answer "how
+    device id, nothing that identifies a handset, only enough to answer "how
     many families are on iPhone, and how many of those installed it".
 
     installed_at is written once and never overwritten, so it means "first
@@ -1022,7 +1022,7 @@ def alert_history():
     Nothing new is stored for this: resolving an alert has always been an
     UPDATE to status='resolved', never a delete, so the whole history was
     already sitting in the table with nothing reading it. /api/alerts
-    deliberately returns only the current live alert, which is why the family
+    returns only the current live alert, which is why the family
     screen looked like alerts vanished.
 
     Capped rather than paginated: nothing prunes this table, so a long-running

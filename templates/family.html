@@ -26,7 +26,7 @@
 <script>
 let alertObj=null, aView='lock';
 let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, lang:'en'};
-// current language's text/rule tables — set in loadCfg() once settings load
+// current language's text/rule tables, set in loadCfg() once settings load
 let U=UI.en, R=RULES.en;
 
 // This account's pair + CSRF token are loaded from /api/me at boot. CSRF is
@@ -70,7 +70,7 @@ let pushReady=false;      // this device has already subscribed + granted permis
 let pushBackend=false;    // the server supports push (false on hosts that block it)
 function pushSupported(){ return ('serviceWorker' in navigator) && ('PushManager' in window) && ('Notification' in window); }
 
-// iOS exposes Push only inside a Home Screen app — in an ordinary Safari tab
+// iOS exposes Push only inside a Home Screen app, in an ordinary Safari tab
 // PushManager is simply absent, so pushSupported() is false and the button
 // below renders nothing at all. Without this the family member on an iPhone
 // sees no alerts option and no reason why, and concludes the app can't do
@@ -91,7 +91,7 @@ function needsIosInstall(){ return isIOS() && !isStandalone() && !pushSupported(
 // from the Home Screen. Play reports Android installs; iPhone installs are
 // otherwise invisible, because iOS fires no install event at all. Reuses the
 // detection above rather than sniffing anything new, and sends three fixed
-// words — never the user agent string.
+// words, never the user agent string.
 function reportDevice(){
   const platform = isIOS() ? 'ios'
                  : (/Android/.test(navigator.userAgent) ? 'android' : 'other');
@@ -145,7 +145,7 @@ async function enablePush(){
     // If the server's VAPID keys have changed since, this one still looks
     // healthy to the browser but every send is rejected, silently. Reusing it
     // unconditionally meant a user in that state could never recover from the
-    // UI — tapping the button just handed the dead subscription back. So
+    // UI, tapping the button just handed the dead subscription back. So
     // compare keys and re-subscribe when they differ.
     if(sub && !sameKey(sub, wanted)){
       try{ await sub.unsubscribe(); }catch(e){}
@@ -208,7 +208,7 @@ function lockHTML(){
 }
 function open_(){aView='detail';render();}
 
-// Past alerts. Loaded only when opened — the family screen polls every three
+// Past alerts. Loaded only when opened, the family screen polls every three
 // seconds and there is no reason to carry history in that loop.
 async function toggleHistory(){
   histOpen = !histOpen;

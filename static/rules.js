@@ -2,10 +2,10 @@
 // One place that defines every scam situation AND every bit of UI text, keyed
 // by language. Senior, family and setup pages all read from here, so wording
 // stays in sync. Adding a language = adding one entry to RULES and UI below
-// (plus a LANG_TTS code and a LANGS list item) — no template changes needed.
+// (plus a LANG_TTS code and a LANGS list item), no template changes needed.
 //
 // ⚠️ Translations should be reviewed by a native speaker before being relied
-// on — these are safety messages for elders.
+// on, these are safety messages for elders.
 
 // HTML-escape anything that came from onboarding (names, phone numbers) before
 // it is dropped into the page. Normal names and digits pass through unchanged.
@@ -887,6 +887,6 @@ function langOf(cfg){
   return (l && UI[l] && RULES[l]) ? l : 'en';
 }
 
-// names — defaults until onboarding overwrites them
+// names, defaults until onboarding overwrites them
 const SENIOR_NAME = 'कमला';
 const FAMILY_NAME = 'अर्जुन';

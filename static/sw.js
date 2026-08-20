@@ -1,5 +1,5 @@
-// KinGuard service worker — makes the app installable, works offline for the
-// static shell, and shows push notifications. It deliberately does NOT cache
+// KinGuard service worker, makes the app installable, works offline for the
+// static shell, and shows push notifications. It does not cache
 // /api/ so alerts stay live.
 
 // Shared RULES/UI tables so a push notification uses the same wording + language
@@ -7,7 +7,7 @@
 importScripts('/static/rules.js');
 
 const CACHE = 'kinguard-v19';  // bump when cached assets (rules.js, templates) change
-// NOTE: '/', '/family' and '/setup' are intentionally NOT pre-cached — they are
+// '/', '/family' and '/setup' are not pre-cached: they are
 // server redirects (to /login or the family screen depending on auth), and
 // caching a redirected response would break the install. They are still handled
 // live by the network-first fetch handler below.
@@ -31,7 +31,7 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-// A push arrived from the server — show it even if every KinGuard tab is closed.
+// A push arrived from the server, show it even if every KinGuard tab is closed.
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) {}
@@ -68,7 +68,7 @@ self.addEventListener('notificationclick', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
-  // Live data (alerts, settings) must always hit the network — never cache it.
+  // Live data (alerts, settings) must always hit the network, never cache it.
   if (url.pathname.startsWith('/api/')) return;
   // Network-first: when online, always load the latest file (so edits show up on
   // a normal reload) and refresh the cached copy; fall back to cache only when

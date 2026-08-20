@@ -11,7 +11,7 @@
 <meta name="color-scheme" content="light">
 <!-- The elder phone gets its own manifest, whose start_url carries this
      device's token; see /senior.webmanifest. crossorigin="use-credentials"
-     is required — a manifest is fetched WITHOUT cookies by default, and
+     is required, a manifest is fetched WITHOUT cookies by default, and
      without them the server cannot tell which device is asking. -->
 <link rel="manifest" href="/senior.webmanifest" crossorigin="use-credentials">
 <link rel="apple-touch-icon" href="/static/icon-192.png">
@@ -32,7 +32,7 @@ let sendState='ok';   // 'sending' | 'ok' | 'failed' — did the family actually
 // defaults; overwritten by onboarding settings
 let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, family_phone:'',
          big_text:0, high_contrast:0, vibrate:0, auto_speak:0, simple_mode:0, lang:'en'};
-// current language's text/rule tables — set in init() once settings load
+// current language's text/rule tables, set in init() once settings load
 let U=UI.en, R=RULES.en;
 
 // This phone is linked by a secret device token kept in an HttpOnly cookie, set
@@ -41,7 +41,7 @@ let U=UI.en, R=RULES.en;
 function api(path){ return path; }
 
 // The settings this screen would normally read are gone whenever the phone is
-// unlinked — the family may have revoked the link or deleted their account — so
+// unlinked, the family may have revoked the link or deleted their account, so
 // the last known language and accessibility needs are kept on the phone itself.
 // Without this the elder gets default-size English at the moment the app stops
 // working, which is exactly the wrong moment to lose their own language.
@@ -56,8 +56,8 @@ function lastPrefs(){
 }
 
 // Shown whenever this phone has no working link: never set up, link revoked, or
-// the family's account deleted. The wording has to be true in all three cases —
-// it must not promise a link that no longer exists — and it is deliberately NOT
+// the family's account deleted. The wording has to be true in all three cases -
+// it must not promise a link that no longer exists, and it is not
 // styled 'safe', because a phone that cannot call for help is not a reassuring
 // state and must not look like one.
 function renderNoPair(){
@@ -101,7 +101,7 @@ function render(announce){
   else s.innerHTML=verdictHTML(view,false);
   s.classList.remove('fade');void s.offsetWidth;s.classList.add('fade');
   // Only buzz/speak on the first show of a verdict, not on the re-render that
-  // follows the network result — otherwise it would announce twice per tap.
+  // follows the network result, otherwise it would announce twice per tap.
   if(view!=='home' && announce){ buzz(); if(cfg.auto_speak) speak(view); }
 }
 
@@ -178,8 +178,8 @@ function verdictHTML(id,isPanic){
     <button class="back" onclick="goHome()">${U.back}</button>`;
 }
 // Stop any speech on the way out. Without this the explanation kept playing
-// after the elder had left the screen, with nothing on screen to stop it —
-// the Back button is deliberately NOT disabled while speaking, because
+// after the elder had left the screen, with nothing on screen to stop it -
+// the Back button is not disabled while speaking, because
 // trapping a frightened person on a screen for the 10-15 seconds it takes to
 // read out is worse than the leak it would prevent.
 function goHome(){
