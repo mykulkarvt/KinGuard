@@ -1,8 +1,8 @@
-# 🛡️ KinGuard — परिवार की सुरक्षा (high-school project build)
+# 🛡️ KinGuard — family-in-the-loop scam protection
 
-A simple vernacular scam-protection tool for elderly users — in **Hindi, Telugu,
-and English** — with a **family-in-the-loop** alert and an **accessibility setup**
-for age-related needs.
+A scam-protection tool for elderly users — in **Hindi, Telugu, Kannada, Tamil and
+English** — with a **family-in-the-loop** alert and an **accessibility setup** for
+age-related needs.
 
 When a senior reports a suspicious situation, a calm warning shows on their phone
 *and* an alert appears on a family member's phone over the internet.
@@ -10,13 +10,13 @@ When a senior reports a suspicious situation, a calm warning shows on their phon
 ## What's in it
 
 1. **Setup** (`/setup`) — the family member does this **once**: enters names,
-   phone numbers, picks the **language** (हिन्दी / తెలుగు / English), and ticks the
+   phone numbers, picks the **language** (5 supported), and ticks the
    senior's needs (hard of hearing / low vision / shaky hands / memory). Those
    needs automatically turn on the right accessibility mode — the senior never
    has to configure anything.
 2. **Senior's phone** (`/senior`) — a big "I'm scared" button + 5 common scam
-   situations in Hindi. Tapping one shows a calm verdict ("यह धोखा है"), the
-   steps to take, reads it aloud, and can call family / 1930.
+   situations, in the language chosen at setup. Tapping one shows a calm verdict,
+   the steps to take, reads it aloud, and can call family / 1930.
 3. **Family phone** (`/family`) — the moment the senior taps, an alert appears:
    *what* they reported, *why* it's dangerous, and *what to say to them*, with
    one tap to call, report, or resolve.
@@ -60,10 +60,10 @@ checks every 3 seconds). Web Push adds a real system notification that arrives
    buzz the family phone even with the app closed.
 
 What it needs to actually deliver:
-- **HTTPS** *and* a host with **open outbound network** (so the server can reach
-  the browser's push service). Works on Render / Fly / Railway and on
-  `localhost` for testing — but **not on free PythonAnywhere**, which blocks the
-  outbound send.
+- **HTTPS** *and* a host that can reach the browser's push service. This does
+  work on PythonAnywhere's free tier, whose outbound allowlist covers the push
+  endpoints — but the push libraries must be installed with the **web app's**
+  interpreter, which is not necessarily the one a console gives you.
 - VAPID keys: run `python gen_vapid.py` once and set the printed values as the
   env vars `VAPID_PUBLIC`, `VAPID_PRIVATE`, `VAPID_SUBJECT` on the host. (With no
   env vars set, a temporary dev key pair is generated so it's testable locally.)
@@ -93,7 +93,7 @@ so both phones can reach it. Then both install the app from that public URL.
 | `templates/senior.html` | the senior's screen (applies accessibility settings) |
 | `templates/family.html` | the family member's screen (polls + push subscribe) |
 | `templates/index.html` | a chooser landing page |
-| `static/rules.js` | all scam rules **and** UI text, per language (हिन्दी / తెలుగు / English) |
+| `static/rules.js` | all scam rules **and** UI text, per language (5 supported) |
 | `static/style.css` | shared styling + the accessibility modes |
 | `static/manifest.json` | makes it installable as an app (PWA) |
 | `static/sw.js` | service worker — installability, offline shell, **push notifications** (never caches alerts) |
@@ -113,12 +113,14 @@ so both phones can reach it. Then both install the app from that public URL.
   language (especially Telugu) before relying on it.
 - **Verify the facts** (the 1930 helpline; that "digital arrest" has no legal
   basis) before relying on them.
-- **Push needs the right host.** In-app polling works anywhere, but push
-  notifications (alerts when the app is closed) need HTTPS + open outbound
-  network — so they work on Render/Fly/Railway, **not** on free PythonAnywhere.
+- **Push has to be switched on per family.** In-app polling works anywhere, but
+  alerts-when-closed need HTTPS *and* the family member to tap "Get alerts even
+  when closed" once. Until they do, an alert raised while the app is closed
+  reaches no one — the app looks like it is working and is not.
 - **Push delivery isn't guaranteed when fully offline** — a closed device only
   gets a queued alert if it comes back within ~2 minutes (the push TTL).
-- Uses Flask's development server — fine for a project/demo, not production.
+- Runs under the host's WSGI server in production; `flask run` is for local
+  development only.
 
 ## Possible next steps
 
