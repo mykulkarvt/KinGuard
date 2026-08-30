@@ -19,11 +19,13 @@
   <header><span class="brand"><span class="sh">🛡️</span><span>KinGuard <small style="opacity:.85">Create account</small></span></span></header>
   <div class="stage">
     <div class="lead" style="margin-bottom:14px">Create a family account</div>
-    <label class="fld">Email
-      <input id="email" type="email" autocomplete="username" placeholder="you@example.com"></label>
-    <label class="fld">Password
-      <input id="pw" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
-    <button class="listen" style="margin-top:8px" onclick="doRegister()">Create account</button>
+    <form class="authform" onsubmit="return doRegister(event)">
+      <label class="fld">Email
+        <input id="email" type="email" autocomplete="username" placeholder="you@example.com"></label>
+      <label class="fld">Password
+        <input id="pw" type="password" autocomplete="new-password" placeholder="At least 8 characters"></label>
+      <button class="listen" style="margin-top:8px" type="submit">Create account</button>
+    </form>
     <div id="msg"></div>
     <div style="text-align:center;margin-top:18px;font-weight:600;color:var(--muted)">
       Already have an account? <a href="/login" style="color:#0A4E43;font-weight:800">Log in</a></div>
@@ -33,19 +35,20 @@
 </div>
 <script>
 function err(t){ document.getElementById('msg').innerHTML='<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">'+t+'</div>'; }
-async function doRegister(){
+async function doRegister(e){
+  if(e) e.preventDefault();
   const email=(document.getElementById('email').value||'').trim();
   const password=document.getElementById('pw').value||'';
   document.getElementById('msg').textContent='';
-  if(password.length<8){ err('Password must be at least 8 characters.'); return; }
+  if(password.length<8){ err('Password must be at least 8 characters.'); return false; }
   try{
     const r=await fetch('/api/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,password})});
     const j=await r.json().catch(()=>({}));
     if(r.ok){ location.href='/setup'; return; }   // go straight to configuring the pair
     err(j.error||'Could not create the account.');
   }catch(e){ err('Network error — please try again.'); }
+  return false;
 }
-document.addEventListener('keydown',e=>{ if(e.key==='Enter') doRegister(); });
 </script>
 </body>
 </html>

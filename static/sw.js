@@ -6,7 +6,7 @@
 // as the rest of the app.
 importScripts('/static/rules.js');
 
-const CACHE = 'kinguard-v19';  // bump when cached assets (rules.js, templates) change
+const CACHE = 'kinguard-v20';  // bump when cached assets (rules.js, templates) change
 // '/', '/family' and '/setup' are not pre-cached: they are
 // server redirects (to /login or the family screen depending on auth), and
 // caching a redirected response would break the install. They are still handled

@@ -22,11 +22,13 @@
       padding:14px 16px;margin-bottom:16px;font-weight:700;color:#0A4E43">
       ✅ Your account has been deleted.</div>
     <div class="lead" style="margin-bottom:14px">Family log in</div>
-    <label class="fld">Email
-      <input id="email" type="email" autocomplete="username" placeholder="you@example.com"></label>
-    <label class="fld">Password
-      <input id="pw" type="password" autocomplete="current-password" placeholder="Your password"></label>
-    <button class="listen" style="margin-top:8px" onclick="doLogin()">Log in</button>
+    <form class="authform" onsubmit="return doLogin(event)">
+      <label class="fld">Email
+        <input id="email" type="email" autocomplete="username" placeholder="you@example.com"></label>
+      <label class="fld">Password
+        <input id="pw" type="password" autocomplete="current-password" placeholder="Your password"></label>
+      <button class="listen" style="margin-top:8px" type="submit">Log in</button>
+    </form>
     <div id="msg"></div>
     <div style="text-align:center;margin-top:18px;font-weight:600;color:var(--muted)">
       New to KinGuard? <a href="/register" style="color:#0A4E43;font-weight:800">Create an account</a></div>
@@ -41,7 +43,8 @@ if(new URLSearchParams(location.search).get('deleted')==='1'){
   document.getElementById('deleted').style.display='block';
 }
 function err(t){ document.getElementById('msg').innerHTML='<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">'+t+'</div>'; }
-async function doLogin(){
+async function doLogin(e){
+  if(e) e.preventDefault();
   const email=(document.getElementById('email').value||'').trim();
   const password=document.getElementById('pw').value||'';
   document.getElementById('msg').textContent='';
@@ -51,8 +54,8 @@ async function doLogin(){
     if(r.ok){ location.href=nextUrl(); return; }
     err(j.error||'Could not log in.');
   }catch(e){ err('Network error — please try again.'); }
+  return false;
 }
-document.addEventListener('keydown',e=>{ if(e.key==='Enter') doLogin(); });
 </script>
 </body>
 </html>

@@ -91,6 +91,7 @@ a.callbtn.sec{background:#fff;color:var(--teal-dark);border:2px solid var(--teal
   font-size:18px;font-weight:800;padding:14px;}
 
 /* setup form */
+.authform{display:flex;flex-direction:column;}
 .fld{display:block;font-size:15px;font-weight:700;color:#5d5345;margin-bottom:14px;}
 .fld input{display:block;width:100%;margin-top:6px;font-family:inherit;font-size:18px;font-weight:600;
   padding:13px 14px;border:2px solid #ECE3D2;border-radius:14px;background:#fff;}

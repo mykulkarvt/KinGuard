@@ -38,7 +38,11 @@ if not app.secret_key:
           "reset on restart. Generate one with: python -c \"import secrets; "
           "print(secrets.token_hex(32))\"  and set KINGUARD_SECRET_KEY.")
 
-app.permanent_session_lifetime = timedelta(days=30)
+# A family member may not open KinGuard for months, and the moment they do is
+# usually an alert. Expiring the session would put a login screen between the
+# push notification and the elder. 'Log out everywhere' still works instantly
+# through session_version, which is checked on every request.
+app.permanent_session_lifetime = timedelta(days=365)
 app.config.update(
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE="Lax",
