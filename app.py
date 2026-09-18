@@ -58,6 +58,11 @@ ALLOWED_CONDITIONS = {"hearing", "vision", "tremor", "memory"}
 # Languages the UI is translated into (see static/rules.js). 'en' is the default.
 ALLOWED_LANGS = {"hi", "te", "kn", "ta", "en"}
 DEFAULT_LANG = "en"
+# Countries with their own scam catalogue (see COUNTRIES in static/rules.js).
+# Every pair saved before US support existed has no country and reads as
+# India, which is what it was already being shown.
+ALLOWED_COUNTRIES = {"IN", "US"}
+DEFAULT_COUNTRY = "IN"
 
 # An alert older than this (seconds) is treated as stale and stops showing.
 ALERT_TTL_SECONDS = 600  # 10 minutes
@@ -241,6 +246,9 @@ def init_db():
         )
         if not _has_col(con, "settings", "owner_account_id"):
             con.execute("ALTER TABLE settings ADD COLUMN owner_account_id INTEGER")
+        # Pairs saved before countries existed get NULL here and read as India.
+        if not _has_col(con, "settings", "country"):
+            con.execute("ALTER TABLE settings ADD COLUMN country TEXT")
         if _table_exists(con, "settings_old"):
             old = con.execute("SELECT * FROM settings_old WHERE id=1").fetchone()
             if old:
@@ -438,6 +446,7 @@ def settings_dict(row):
         "auto_speak": row["auto_speak"],
         "simple_mode": row["simple_mode"],
         "lang": row["lang"] or DEFAULT_LANG,
+        "country": row["country"] or DEFAULT_COUNTRY,
     }
 
 
@@ -447,6 +456,7 @@ DEFAULT_SETTINGS = {
     "conditions": [], "big_text": 0, "high_contrast": 0,
     "vibrate": 0, "auto_speak": 0, "simple_mode": 0,
     "lang": DEFAULT_LANG,
+    "country": DEFAULT_COUNTRY,
 }
 
 
@@ -507,13 +517,14 @@ def send_push(pair, rule):
     if not PUSH_ENABLED:
         return
     with closing(get_db()) as con:
-        srow = con.execute("SELECT senior_name, lang FROM settings WHERE pair=?", (pair,)).fetchone()
+        srow = con.execute("SELECT senior_name, lang, country FROM settings WHERE pair=?", (pair,)).fetchone()
         subs = con.execute("SELECT endpoint, p256dh, auth FROM push_subs WHERE pair=?", (pair,)).fetchall()
     if not subs:
         return
     senior = (srow["senior_name"] if srow else "") or ""
     lang = (srow["lang"] if srow else "") or DEFAULT_LANG
-    payload = json.dumps({"rule": rule, "lang": lang, "senior": senior})
+    country = (srow["country"] if srow else "") or DEFAULT_COUNTRY
+    payload = json.dumps({"rule": rule, "lang": lang, "country": country, "senior": senior})
     dead = []
     for s in subs:
         info = {"endpoint": s["endpoint"],
@@ -871,6 +882,8 @@ def save_settings():
     simple_mode = 1 if "memory" in cset else 0
     lang = data.get("lang")
     lang = lang if lang in ALLOWED_LANGS else DEFAULT_LANG
+    country = data.get("country")
+    country = country if country in ALLOWED_COUNTRIES else DEFAULT_COUNTRY
     aid = g.account["id"]
     with closing(get_db()) as con, con:
         # Edit an existing pair only if this account owns it; otherwise create a
@@ -881,22 +894,22 @@ def save_settings():
             """INSERT INTO settings
                   (pair, owner_account_id, senior_name, senior_phone,
                    family_name, family_phone, conditions, big_text, high_contrast,
-                   vibrate, auto_speak, simple_mode, lang)
-               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                   vibrate, auto_speak, simple_mode, lang, country)
+               VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                ON CONFLICT(pair) DO UPDATE SET
                   senior_name=excluded.senior_name, senior_phone=excluded.senior_phone,
                   family_name=excluded.family_name, family_phone=excluded.family_phone,
                   conditions=excluded.conditions, big_text=excluded.big_text,
                   high_contrast=excluded.high_contrast, vibrate=excluded.vibrate,
                   auto_speak=excluded.auto_speak, simple_mode=excluded.simple_mode,
-                  lang=excluded.lang""",
+                  lang=excluded.lang, country=excluded.country""",
             (
                 pair, aid,
                 _clean_name(data.get("senior_name"), ""), enc_phone(senior_phone),
                 _clean_name(data.get("family_name"), ""),
                 enc_phone(_clean_phone(data.get("family_phone"))),
                 ",".join(conds),
-                big_text, high_contrast, vibrate, auto_speak, simple_mode, lang,
+                big_text, high_contrast, vibrate, auto_speak, simple_mode, lang, country,
             ),
         )
         # Make sure the pair has an active senior link; hand back the token only
@@ -937,7 +950,7 @@ def senior_config():
         return jsonify(error="not linked"), 401
     s = settings_dict(row)
     return jsonify(senior_name=s["senior_name"], family_name=s["family_name"],
-                   family_phone=s["family_phone"], lang=s["lang"],
+                   family_phone=s["family_phone"], lang=s["lang"], country=s["country"],
                    big_text=s["big_text"], high_contrast=s["high_contrast"],
                    vibrate=s["vibrate"], auto_speak=s["auto_speak"],
                    simple_mode=s["simple_mode"])

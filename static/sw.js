@@ -6,7 +6,7 @@
 // as the rest of the app.
 importScripts('/static/rules.js');
 
-const CACHE = 'kinguard-v20';  // bump when cached assets (rules.js, templates) change
+const CACHE = 'kinguard-v21';  // bump when cached assets (rules.js, templates) change
 // '/', '/family' and '/setup' are not pre-cached: they are
 // server redirects (to /login or the family screen depending on auth), and
 // caching a redirected response would break the install. They are still handled
@@ -35,9 +35,10 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('push', (e) => {
   let d = {};
   try { d = e.data ? e.data.json() : {}; } catch (_) {}
-  const lang = (typeof langOf === 'function') ? langOf({ lang: d.lang }) : 'en';
+  const country = (typeof countryOf === 'function') ? countryOf({ country: d.country }) : 'IN';
+  const lang = (typeof langOf === 'function') ? langOf({ lang: d.lang, country: d.country }) : 'en';
   const U = (typeof UI !== 'undefined' && UI[lang]) ? UI[lang] : null;
-  const R = (typeof RULES !== 'undefined' && RULES[lang]) ? RULES[lang] : null;
+  const R = (typeof RULES !== 'undefined' && RULES[country] && RULES[country][lang]) ? RULES[country][lang] : null;
   const senior = d.senior || '';
   const title = U ? fmt(U.maybeScam, { senior }) : '🛡️ KinGuard';
   const body = (R && d.rule && R[d.rule]) ? R[d.rule].label : '';
@@ -82,6 +83,8 @@ self.addEventListener('fetch', (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
       }
       return resp;
-    }).catch(() => caches.match(e.request).then((c) => c || caches.match('/setup')))
+    }).catch(() => caches.match(e.request)
+      .then((c) => c || caches.match('/setup'))
+      .then((c) => c || new Response('Offline', { status: 503, statusText: 'Offline' })))
   );
 });

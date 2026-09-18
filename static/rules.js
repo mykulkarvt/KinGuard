@@ -1,8 +1,9 @@
 // ---- KinGuard : साझा नियम और शब्द (बहुभाषी / multilingual) ----
 // One place that defines every scam situation AND every bit of UI text, keyed
 // by language. Senior, family and setup pages all read from here, so wording
-// stays in sync. Adding a language = adding one entry to RULES and UI below
-// (plus a LANG_TTS code and a LANGS list item), no template changes needed.
+// stays in sync. Adding a language = adding one entry to RULES_IN and UI
+// below (plus a LANG_NAMES entry and a tts code in each COUNTRIES entry that
+// offers it), no template changes needed.
 //
 // ⚠️ Translations should be reviewed by a native speaker before being relied
 // on, these are safety messages for elders.
@@ -21,8 +22,8 @@ function fmt(s, vars){
     (vars && vars[k] != null) ? vars[k] : '');
 }
 
-// Per-scam content. Icons + GRID order are language-independent (see below).
-const RULES = {
+// Per-scam content. Icons + grid order are language-independent (see below).
+const RULES_IN = {
   hi: {
     police: {
       icon: '👮',
@@ -339,6 +340,78 @@ const RULES = {
   }
 };
 
+// US catalogue (English only for now — Spanish is blocked on a native-speaker
+// review). Same five situations as India, but the agencies, danger lines and
+// advice are US-specific: there is no "digital arrest" here, this is
+// government impersonation and the "phantom hacker" scam.
+const RULES_US = {
+  en: {
+    police: {
+      icon: '👮',
+      label: 'A "government agent" says you owe money or have a warrant',
+      sub: 'IRS, Social Security, a warrant for your arrest',
+      why: 'Real government agencies never call demanding immediate payment or threaten arrest over the phone. They contact you by mail first.',
+      danger: 'This is a government impersonation scam. No real agency arrests you by phone or demands payment right away.',
+      coach: ['Stay calm. Tell them it is a scam — hang up right away.',
+              'No real government agency arrests anyone over the phone.',
+              'Do not send money, gift cards, or account information.']
+    },
+    transfer: {
+      icon: '💸',
+      label: 'Someone says to move your money to a "safe account"',
+      sub: 'Claims your bank account is compromised',
+      why: 'No real bank or agent ever asks you to move money into a "safe account." Once sent, the money does not come back.',
+      danger: 'This matches the "phantom hacker" scam. No real bank protects your money by having you transfer it.',
+      coach: ['Say — stop now, do not send or transfer money.',
+              'Money moved this way does not come back.',
+              'Hang up and call your bank yourself using the number on your card.']
+    },
+    voice: {
+      icon: '🆘',
+      label: 'Someone who sounds like family urgently needs bail or hospital money',
+      sub: '"Don\'t tell Mom and Dad", accident, arrest',
+      why: 'A computer can copy any voice. Hang up and call your family member yourself on their own number.',
+      danger: 'This matches the "grandparent scam." A cloned voice sounding real proves nothing.',
+      coach: ['Call that person yourself on their own number to confirm.',
+              'Even if the voice sounds exactly right, do not trust it.',
+              'Never send money before you have confirmed by calling back.']
+    },
+    link: {
+      icon: '🔗',
+      label: 'A text or email link about a package, bank alert, or blocked account',
+      sub: '"Click now or your account will be locked"',
+      why: 'Banks and delivery services never ask you to fix an account through a text or email link. Do not click it or enter any information.',
+      danger: 'This is a phishing link, a fake website made to look real.',
+      coach: ['Do not click the link.',
+              'Never enter a password, PIN, or card number after clicking a link like this.',
+              'Open the real bank app or website yourself and check.']
+    },
+    prize: {
+      icon: '🎁',
+      label: 'A prize, lottery, or sweepstakes that needs a fee first',
+      sub: '"Pay taxes or a fee to claim your winnings"',
+      why: 'If it sounds too good to be true, it is false. You never have to pay money to receive a real prize.',
+      danger: 'This is a sweepstakes scam. No real prize ever asks you to pay first.',
+      coach: ['Say — do not pay any fee.',
+              'A real prize never requires payment first.',
+              'Ask your family before sending any money.']
+    },
+    panic: {
+      icon: '🆘',
+      label: 'Pressed HELP — "I am scared"',
+      sub: '',
+      why: '',
+      danger: 'They have asked for help out of fear. Call right away.',
+      coach: ['Calmly ask what happened — who, and what they said.',
+              'Any demand for money is a scam.',
+              'Stop them before they send or tell anything.']
+    }
+  }
+};
+
+// Scam catalogues are country-specific. The five situations are the same
+// worldwide, but the named agencies, the danger lines and the advice differ.
+const RULES = { IN: RULES_IN, US: RULES_US };
 // All non-rule UI text ("chrome"), keyed by language. {fam}/{senior} are filled
 // in at render time with the configured names.
 const UI = {
@@ -369,7 +442,7 @@ const UI = {
     listen: '▶  सुनो',
     speaking: 'बोल रहा है…',
     back: '⟵  वापस',
-    help1930: 'मदद: 1930 दबाओ',
+    helpDial: 'मदद: {label} दबाओ',
     speakPanic: 'रुको। तुम सुरक्षित हो। {fam} को सूचना भेज दी है। फ़ोन रखो। पैसे मत भेजो।',
     scamTail: 'फ़ोन रखो। पैसे मत भेजो।',
     // family
@@ -385,7 +458,7 @@ const UI = {
     theyReported: 'उन्होंने बताया',
     callSeniorNow: '{senior} को अभी फ़ोन करो',
     whatToSay: '💬 उन्हें क्या कहना है',
-    report1930: '1930 पर रिपोर्ट करो',
+    reportTo: '{label} पर रिपोर्ट करो',
     resolve: '✓  वे सुरक्षित हैं — मैंने सँभाल लिया',
     resolvedTitle: 'सुरक्षित दर्ज किया',
     resolvedWhy: 'दर्ज कर लिया। अगर {senior} को फिर निशाना बनाया गया, तो आपको इसी तरह सूचना मिलेगी।',
@@ -473,7 +546,7 @@ const UI = {
     listen: '▶  వినండి',
     speaking: 'చదువుతోంది…',
     back: '⟵  వెనక్కి',
-    help1930: 'సహాయం: 1930 నొక్కండి',
+    helpDial: 'సహాయం: {label} నొక్కండి',
     speakPanic: 'ఆగండి. మీరు సురక్షితం. {fam}కు సూచన పంపాం. ఫోన్ పెట్టేయండి. డబ్బు పంపకండి.',
     scamTail: 'ఫోన్ పెట్టేయండి. డబ్బు పంపకండి.',
     // family
@@ -489,7 +562,7 @@ const UI = {
     theyReported: 'వారు చెప్పింది',
     callSeniorNow: '{senior}కు ఇప్పుడే ఫోన్ చేయండి',
     whatToSay: '💬 వారికి ఏం చెప్పాలి',
-    report1930: '1930కు రిపోర్ట్ చేయండి',
+    reportTo: '{label}కు రిపోర్ట్ చేయండి',
     resolve: '✓  వారు సురక్షితం — నేను చూసుకున్నాను',
     resolvedTitle: 'సురక్షితంగా నమోదు చేశాం',
     resolvedWhy: 'నమోదు చేశాం. {senior}ను మళ్ళీ లక్ష్యంగా చేస్తే, మీకు ఇలాగే సూచన వస్తుంది.',
@@ -577,7 +650,7 @@ const UI = {
     listen: '▶  ಕೇಳಿ',
     speaking: 'ಹೇಳಲಾಗುತ್ತಿದೆ…',
     back: '⟵  ಹಿಂದೆ',
-    help1930: 'ಸಹಾಯ: 1930 ಒತ್ತಿ',
+    helpDial: 'ಸಹಾಯ: {label} ಒತ್ತಿ',
     speakPanic: 'ನಿಲ್ಲಿ. ನೀವು ಸುರಕ್ಷಿತರಾಗಿದ್ದೀರಿ. {fam} ಅವರಿಗೆ ಸೂಚನೆ ಕಳುಹಿಸಲಾಗಿದೆ. ಫೋನ್ ಇಡಿ. ಹಣ ಕಳುಹಿಸಬೇಡಿ.',
     scamTail: 'ಫೋನ್ ಇಡಿ. ಹಣ ಕಳುಹಿಸಬೇಡಿ.',
     // family
@@ -593,7 +666,7 @@ const UI = {
     theyReported: 'ಅವರು ತಿಳಿಸಿದ್ದು',
     callSeniorNow: 'ಈಗಲೇ {senior} ಅವರಿಗೆ ಕರೆ ಮಾಡಿ',
     whatToSay: '💬 ಅವರಿಗೆ ಏನು ಹೇಳಬೇಕು',
-    report1930: '1930ಕ್ಕೆ ದೂರು ನೀಡಿ',
+    reportTo: '{label}ಕ್ಕೆ ದೂರು ನೀಡಿ',
     resolve: '✓  ಅವರು ಸುರಕ್ಷಿತರು — ನಾನು ನಿಭಾಯಿಸಿದ್ದೇನೆ',
     resolvedTitle: 'ಸುರಕ್ಷಿತ ಎಂದು ಗುರುತಿಸಲಾಗಿದೆ',
     resolvedWhy: 'ದಾಖಲಾಗಿದೆ. {senior} ಮತ್ತೆ ಗುರಿಯಾದರೆ, ನಿಮಗೆ ಇದೇ ರೀತಿ ಸೂಚನೆ ಬರುತ್ತದೆ.',
@@ -681,7 +754,7 @@ const UI = {
     listen: '▶  கேளுங்கள்',
     speaking: 'சொல்லப்படுகிறது…',
     back: '⟵  பின்',
-    help1930: 'உதவி: 1930 அழுத்துங்கள்',
+    helpDial: 'உதவி: {label} அழுத்துங்கள்',
     speakPanic: 'நிறுத்துங்கள். நீங்கள் பாதுகாப்பாக இருக்கிறீர்கள். {fam} அவர்களுக்கு எச்சரிக்கை அனுப்பப்பட்டது. ஃபோனை வையுங்கள். பணம் அனுப்ப வேண்டாம்.',
     scamTail: 'ஃபோனை வையுங்கள். பணம் அனுப்ப வேண்டாம்.',
     // family
@@ -697,7 +770,7 @@ const UI = {
     theyReported: 'அவர்கள் தெரிவித்தது',
     callSeniorNow: 'இப்போதே {senior} அவர்களை அழையுங்கள்',
     whatToSay: '💬 அவர்களிடம் என்ன சொல்ல வேண்டும்',
-    report1930: '1930க்கு புகார் அளியுங்கள்',
+    reportTo: '{label}க்கு புகார் அளியுங்கள்',
     resolve: '✓  அவர்கள் பாதுகாப்பானவர் — நான் கவனித்துக் கொண்டேன்',
     resolvedTitle: 'பாதுகாப்பானது எனக் குறிக்கப்பட்டது',
     resolvedWhy: 'பதிவு செய்யப்பட்டது. {senior} மீண்டும் இலக்காக்கப்பட்டால், இதே போல் உங்களுக்கு எச்சரிக்கை வரும்.',
@@ -785,7 +858,7 @@ const UI = {
     listen: '▶  Listen',
     speaking: 'Speaking…',
     back: '⟵  Back',
-    help1930: 'Help: dial 1930',
+    helpDial: 'Help: dial {label}',
     speakPanic: 'Stop. You are safe. The alert has been sent to {fam}. Hang up. Do not send money.',
     scamTail: 'Hang up. Do not send money.',
     // family
@@ -801,7 +874,7 @@ const UI = {
     theyReported: 'They reported',
     callSeniorNow: 'Call {senior} now',
     whatToSay: '💬 What to say to them',
-    report1930: 'Report to 1930',
+    reportTo: 'Report to {label}',
     resolve: '✓  They are safe — I have handled it',
     resolvedTitle: 'Marked safe',
     resolvedWhy: 'Recorded. If {senior} is targeted again, you will be alerted the same way.',
@@ -825,11 +898,11 @@ const UI = {
     // setup
     whichPhone: 'Which phone is whose?',
     seniorNameLbl: 'Elder’s name',
-    seniorNamePh: 'e.g. Kamala',
+    seniorNamePh: 'e.g. {name}',
     seniorPhoneLbl: 'Elder’s phone number',
     seniorPhonePh: 'Family will call this number',
     familyNameLbl: 'Trusted family member’s name',
-    familyNamePh: 'e.g. Arjun',
+    familyNamePh: 'e.g. {name}',
     familyPhoneLbl: 'Family member’s phone number',
     familyPhonePh: 'The elder will call this number',
     langDivider: 'Language · भाषा',
@@ -864,29 +937,73 @@ const UI = {
 };
 
 // Order shown on the senior's situation grid (panic is the separate red button).
-const GRID = ['police', 'transfer', 'voice', 'link', 'prize'];
+const COUNTRIES = {
+  IN: {
+    name: 'India',
+    langs: ['hi', 'te', 'kn', 'ta', 'en'],
+    // A device may not have a voice installed for every language; if so,
+    // speech silently does nothing while the visual guidance still works.
+    tts:  { hi: 'hi-IN', te: 'te-IN', kn: 'kn-IN', ta: 'ta-IN', en: 'en-IN' },
+    // Order shown on the senior's grid (panic is the separate red button).
+    grid: ['police', 'transfer', 'voice', 'link', 'prize'],
+    emergency: '112',
+    report: {
+      tel:   '1930',
+      label: '1930',
+      hours: null,   // null = staffed 24/7, so the call always works
+      web:   []
+    },
+    // Shown as "e.g. {name}" placeholders in the setup form. Only 'en' uses
+    // these — hi/te/kn/ta keep their own hardcoded names since those
+    // languages are only ever offered for an India pair.
+    sampleNames: { senior: 'Kamala', family: 'Arjun' }
+  },
+  US: {
+    name: 'United States',
+    langs: ['en'],
+    tts:  { en: 'en-US' },
+    grid: ['police', 'transfer', 'voice', 'link', 'prize'],
+    emergency: '911',
+    report: {
+      tel:   '877-908-3360',
+      label: 'AARP Helpline',
+      // Not staffed 24/7 like India's 1930 — a US elder calling outside these
+      // hours reaches nobody, which is why FTC/IC3 web reports exist beside it.
+      hours: 'Mon-Fri, 8am-8pm ET',
+      web:   ['reportfraud.ftc.gov', 'ic3.gov']
+    },
+    sampleNames: { senior: 'Linda', family: 'Bob' }
+  }
+};
 
-// Languages offered in setup (display name is shown in its own script).
-const LANGS = [
-  { id: 'hi', name: 'हिन्दी' },
-  { id: 'te', name: 'తెలుగు' },
-  { id: 'kn', name: 'ಕನ್ನಡ' },
-  { id: 'ta', name: 'தமிழ்' },
-  { id: 'en', name: 'English' }
-];
+// Display name for each language, in its own script. Language-only, so it is
+// shared across countries; COUNTRIES[c].langs decides which ones are offered.
+const LANG_NAMES = {
+  hi: 'हिन्दी',
+  te: 'తెలుగు',
+  kn: 'ಕನ್ನಡ',
+  ta: 'தமிழ்',
+  en: 'English'
+};  
 
-// Map a language to a Web Speech API (BCP-47) voice code for auto-speak.
-// Note: a device may not have a voice installed for every language; if so,
-// speech silently does nothing while the visual guidance still works.
-const LANG_TTS = { hi: 'hi-IN', te: 'te-IN', kn: 'kn-IN', ta: 'ta-IN', en: 'en-IN' };
+const DEFAULT_COUNTRY = 'IN';
+
+// Resolve a possibly-unknown country to one we actually have. Every existing
+// pair has no country stored, so they land on India — exactly what they were
+// already being shown, which is what makes this migration invisible to them.
+function countryOf(cfg){
+  const c = cfg && cfg.country;
+  return (c && COUNTRIES[c] && RULES[c]) ? c : DEFAULT_COUNTRY;
+}
 
 // Resolve a possibly-unknown language to one we actually have, falling back to
 // English. Use everywhere a cfg.lang is read.
 function langOf(cfg){
+const c = countryOf(cfg);
   const l = cfg && cfg.lang;
-  return (l && UI[l] && RULES[l]) ? l : 'en';
+  return (l && UI[l] && RULES[c] && RULES[c][l]) ? l : 'en';
 }
 
 // names, defaults until onboarding overwrites them
-const SENIOR_NAME = 'कमला';
-const FAMILY_NAME = 'अर्जुन';
+const SENIOR_NAME = 'Kamala';
+const FAMILY_NAME = 'Arjun';

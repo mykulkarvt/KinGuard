@@ -24,10 +24,11 @@
 
 <script src="/static/rules.js"></script>
 <script>
-// esc() / UI / LANGS / langOf() all come from rules.js
+// esc() / UI / COUNTRIES / LANG_NAMES / countryOf() / langOf() all come from rules.js
 let conds = new Set();
 let cfg = {};
 let lang = 'en';
+let country = 'IN';
 let delOpen = false;   // is the delete-account confirmation showing?
 let acctEmail = '';    // shown in the confirmation so you can see which account
 // If editing an existing pair, its token is in the URL; otherwise this is a new pair.
@@ -37,7 +38,7 @@ async function init(){
   try{ const url = pair ? '/api/settings?pair='+encodeURIComponent(pair) : '/api/settings';
        cfg = await (await fetch(url)).json();
        (cfg.conditions||[]).forEach(c=>{if(c)conds.add(c);});
-       lang = langOf(cfg); }catch(e){}
+       lang = langOf(cfg); country = countryOf(cfg); }catch(e){}  
   try{ const me = await (await fetch('/api/me')).json();
        acctEmail = me.email || ''; }catch(e){}
   render();
@@ -83,24 +84,32 @@ function render(){
   // point where it was scannable, and it pushed the actual setup fields off the
   // first screen. The needs below stay as cards, they are multi-select and
   // carry an icon and a description, which a dropdown cannot show.
+    let countryOpts='';
+  Object.keys(COUNTRIES).forEach(id=>{
+       countryOpts += `<option value="${esc(id)}"${id===country?' selected':''}>${esc(COUNTRIES[id].name)}</option>`;
+  });
+
   let langOpts='';
-  LANGS.forEach(l=>{
-    langOpts += `<option value="${esc(l.id)}"${l.id===lang?' selected':''}>${esc(l.name)}</option>`;
+  COUNTRIES[country].langs.forEach(id=>{
+    langOpts += `<option value="${esc(id)}"${id===lang?' selected':''}>${esc(LANG_NAMES[id]||id)}</option>`;
   });
 
   document.getElementById('stage').innerHTML = `
+    <select class="langpick" id="countrysel" aria-label="Country"
+            onchange="setCountry(this.value)">${countryOpts}</select>
+
     <div class="divider" style="margin:4px 0 14px">${U.langDivider}</div>
     <select class="langpick" id="langsel" aria-label="${esc(U.langDivider)}"
-            onchange="setLang(this.value)">${langOpts}</select>
+            onchange="setLang(this.value)">${langOpts}</select> 
 
     <div class="lead" style="margin:22px 0 14px">${U.whichPhone}</div>
     <label class="fld">${U.seniorNameLbl}
-      <input id="sn" type="text" value="${esc(cfg.senior_name)}" placeholder="${esc(U.seniorNamePh)}"></label>
-    <label class="fld">${U.seniorPhoneLbl}
+      <input id="sn" type="text" value="${esc(cfg.senior_name)}" placeholder="${esc(fmt(U.seniorNamePh,{name:COUNTRIES[country].sampleNames.senior}))}"></label>
+          <label class="fld">${U.seniorPhoneLbl}
       <input id="sp" type="tel" value="${esc(cfg.senior_phone)}" placeholder="${esc(U.seniorPhonePh)}"></label>
     <label class="fld">${U.familyNameLbl}
       <input id="fn" type="text" value="${esc(cfg.family_name)}" placeholder="${esc(U.familyNamePh)}"></label>
-    <label class="fld">${U.familyPhoneLbl}
+          <label class="fld">${U.familyPhoneLbl}
       <input id="fp" type="tel" value="${esc(cfg.family_phone)}" placeholder="${esc(U.familyPhonePh)}"></label>
 
     <div class="divider" style="margin:20px 0 14px">${U.needsDivider}</div>
@@ -115,7 +124,7 @@ function render(){
       <div class="divider" style="margin:0 0 14px">${U.accountDivider}</div>
       ${delOpen ? deleteHTML(U)
                 : `<button class="dbtn" onclick="askDelete()">${U.deleteAccount}</button>`}
-    </div>`;
+    </div>`;  
 }
 
 // Google Play requires an in-app way to delete the account and its data. The
@@ -145,6 +154,12 @@ function deleteHTML(U){
 
 function toggle(id){ readInputs(); if(conds.has(id))conds.delete(id); else conds.add(id); render(); }
 function setLang(id){ readInputs(); lang=id; render(); }
+function setCountry(id){
+  readInputs();
+  country=id;
+  if(!COUNTRIES[country].langs.includes(lang)) lang=COUNTRIES[country].langs[0];
+  render();
+}
 
 function csrfHeader(){ const m=document.querySelector('meta[name="csrf-token"]'); return m?m.getAttribute('content'):''; }
 
@@ -224,7 +239,8 @@ async function save(){
     family_name: cfg.family_name || '',
     family_phone: cfg.family_phone || '',
     conditions: Array.from(conds),
-    lang: lang
+    lang: lang,
+    country: country
   };
   try{
     const res = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfHeader()},body:JSON.stringify(body)});

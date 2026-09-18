@@ -31,9 +31,10 @@ let view='home';
 let sendState='ok';   // 'sending' | 'ok' | 'failed' — did the family actually get the alert?
 // defaults; overwritten by onboarding settings
 let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, family_phone:'',
-         big_text:0, high_contrast:0, vibrate:0, auto_speak:0, simple_mode:0, lang:'en'};
+         big_text:0, high_contrast:0, vibrate:0, auto_speak:0, simple_mode:0,
+         lang:'en', country:DEFAULT_COUNTRY};
 // current language's text/rule tables, set in init() once settings load
-let U=UI.en, R=RULES.en;
+let U=UI.en, R=RULES[DEFAULT_COUNTRY].en, C=COUNTRIES[DEFAULT_COUNTRY];
 
 // This phone is linked by a secret device token kept in an HttpOnly cookie, set
 // when the family's private /senior?t=... link was opened. Nothing identifying
@@ -79,8 +80,8 @@ async function init(){
     if(res.ok){ cfg={...cfg, ...await res.json()}; linked=true; }
   }catch(e){}
   if(!linked){ renderNoPair(); return; }
-  const lang=langOf(cfg);
-  U=UI[lang]; R=RULES[lang];
+  const country=countryOf(cfg), lang=langOf(cfg);
+  U=UI[lang]; R=RULES[country][lang]; C=COUNTRIES[country];
   rememberPrefs(lang);   // so the unpaired screen can still speak their language
   document.documentElement.lang=lang;
   document.title='KinGuard — '+(cfg.senior_name||'')+U.possPhone;
@@ -107,8 +108,8 @@ function render(announce){
 
 function homeHTML(){
   let opts='';
-  GRID.forEach(k=>{const r=R[k];
-    opts+=`<button class="opt" onclick="tap('${k}')" aria-label="${r.label}">
+  C.grid.forEach(k=>{const r=R[k];
+     opts+=`<button class="opt" onclick="tap('${k}')" aria-label="${r.label}">
       <span class="ic" aria-hidden="true">${r.icon}</span>
       <span class="lbl">${r.label}<small>${r.sub}</small></span></button>`;});
   return `<button class="panic" onclick="tap('panic')" aria-label="${U.panicAria}">
@@ -174,7 +175,7 @@ function verdictHTML(id,isPanic){
     </div>
     ${retry}
     <button class="listen" id="listenBtn" onclick="speak('${id}')">${U.listen}</button>
-    <a class="callbtn sec" href="tel:1930"><span aria-hidden="true">☎️</span><span>${U.help1930}</span></a>
+    <a class="callbtn sec" href="tel:${C.report.tel}"><span aria-hidden="true">☎️</span><span>${fmt(U.helpDial,{label:C.report.label})}</span></a>
     <button class="back" onclick="goHome()">${U.back}</button>`;
 }
 // Stop any speech on the way out. Without this the explanation kept playing
@@ -194,8 +195,8 @@ function speak(id){
   let text;
   if(id==='panic') text=fmt(U.speakPanic,{fam:cfg.family_name});
   else text=U.fraudTitle+' '+R[id].why+' '+U.scamTail;
-  const u=new SpeechSynthesisUtterance(text);u.lang=LANG_TTS[langOf(cfg)]||'hi-IN';u.rate=0.9;
-  const btn=document.getElementById('listenBtn');
+ const u=new SpeechSynthesisUtterance(text);u.lang=C.tts[langOf(cfg)]||C.tts.en||'en-US';u.rate=0.9;
+   const btn=document.getElementById('listenBtn');
   u.onstart=()=>{if(btn){btn.classList.add('speaking');btn.textContent=U.speaking;}};
   u.onend=()=>{if(btn){btn.classList.remove('speaking');btn.textContent=U.listen;}};
   speechSynthesis.speak(u);

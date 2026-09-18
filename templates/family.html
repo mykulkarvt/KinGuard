@@ -25,9 +25,10 @@
 <script src="/static/rules.js"></script>
 <script>
 let alertObj=null, aView='lock';
-let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME, lang:'en'};
+let cfg={senior_name:SENIOR_NAME, senior_phone:'', family_name:FAMILY_NAME,
+         lang:'en', country:DEFAULT_COUNTRY};
 // current language's text/rule tables, set in loadCfg() once settings load
-let U=UI.en, R=RULES.en;
+let U=UI.en, R=RULES[DEFAULT_COUNTRY].en, C=COUNTRIES[DEFAULT_COUNTRY];
 
 // This account's pair + CSRF token are loaded from /api/me at boot. CSRF is
 // seeded from the page so it's available even before that call returns.
@@ -55,8 +56,8 @@ async function loadCfg(){
     if(r.status===401){ location.href='/login'; return; }
     cfg={...cfg, ...await r.json()};
   }catch(e){}
-  const lang=langOf(cfg);
-  U=UI[lang]; R=RULES[lang];
+ const country=countryOf(cfg), lang=langOf(cfg);
+ U=UI[lang]; R=RULES[country][lang]; C=COUNTRIES[country];
   document.documentElement.lang=lang;
   document.title='KinGuard — '+(cfg.family_name||'')+U.possPhone;
   const tag=document.getElementById('tag'); if(tag) tag.textContent=U.famTag;
@@ -260,8 +261,19 @@ function detailHTML(){
       <div class="danger">⚠️ ${r.danger}</div></div>
     <a class="callbtn" href="tel:${esc(seniorPhone)}"><span aria-hidden="true">📞</span><span>${fmt(U.callSeniorNow,{senior})}</span></a>
     <div class="coach"><div class="k">${U.whatToSay}</div><ul>${coach}</ul></div>
-    <a class="callbtn sec" href="tel:1930"><span aria-hidden="true">☎️</span><span>${U.report1930}</span></a>
+    <a class="callbtn sec" href="tel:${C.report.tel}"><span aria-hidden="true">☎️</span><span>${fmt(U.reportTo,{label:C.report.label})}</span></a>
+    ${webReportHTML()}
     <button class="resolve" onclick="resolve_()">${U.resolve}</button>`;
+}
+
+// Some countries (the US) have no 24/7 report line like India's 1930, so a
+// call during off hours reaches nobody — these give a time-independent path
+// beside the call. Empty for countries where the phone line already covers it.
+function webReportHTML(){
+  if(!C.report.web || !C.report.web.length) return '';
+  return C.report.web.map(u =>
+    `<a class="callbtn sec" href="https://${u}" target="_blank" rel="noopener"><span aria-hidden="true">🌐</span><span>${esc(u)}</span></a>`
+  ).join('');
 }
 
 async function resolve_(){
