@@ -1,6 +1,6 @@
 # KinGuard
 
-Scam protection for elderly parents and grandparents, with a family member in the loop.
+Scam protection for elderly parents and grandparents, with a family member in the loop. Built first for India, with United States support added for the same scam patterns under their US names.
 
 Live at **https://mykit.pythonanywhere.com** · [How it works](https://mykit.pythonanywhere.com/how-it-works)
 
@@ -18,6 +18,11 @@ the scam happens inside a normal phone call. KinGuard takes a different route:
 it does not try to detect anything. It gives the elder one button, and it
 brings their family into the conversation within seconds.
 
+The same five scams run in the United States under different names and cost
+victims there an estimated $7.7 billion a year. "Digital arrest" becomes
+government impersonation. The "safe account" scam is what the FBI calls the
+"phantom hacker" scam. The playbook is the same; only the badge is different.
+
 ## How it works
 
 There are two phones.
@@ -30,7 +35,9 @@ it aloud if they need that.
 **The family member's phone** gets an alert the moment the elder taps. It shows
 what was reported, why it is dangerous, and three specific things to say to
 them, so the family member does not have to think of the words while worried.
-One tap calls the elder. Another reports to 1930, India's cybercrime helpline.
+One tap calls the elder. Another reports it: to 1930, India's cybercrime
+helpline, or, for a US family, to the AARP Fraud Watch helpline plus the FTC
+and FBI's online reporting, since the US has no single 24-hour number.
 
 The family member does a five minute setup once, then sends the elder a private
 link. That link pairs the elder's phone for good.
@@ -43,6 +50,15 @@ elder's phone opens entirely in it.
 
 Adding a language means one entry in `static/rules.js` and nothing else. No
 template changes.
+
+## Countries
+
+KinGuard currently supports **India and the United States**. During setup the
+family member picks a country as well as a language, and that choice decides
+the scam catalogue, the emergency number, and how to report a scam. These
+vary by country, not by language, so they are kept as a separate table.
+Adding a country means one entry in the `COUNTRIES` table in
+`static/rules.js` plus the matching scam catalogue.
 
 ## Accessibility
 
@@ -119,7 +135,7 @@ matter.
 | File | What it is |
 |---|---|
 | `app.py` | The whole backend: accounts, pairing, alerts, push, encryption |
-| `static/rules.js` | Every scam rule and every piece of UI text, per language |
+| `static/rules.js` | Every scam rule and every piece of UI text, per language and per country |
 | `static/sw.js` | Service worker: offline shell and push notifications |
 | `static/style.css` | All styling, including the accessibility modes |
 | `templates/` | The elder screen, family screen, setup, and public pages |
@@ -142,6 +158,9 @@ matter.
 - **The translations need a native speaker's review.** These are safety
   messages read by a frightened person, and they should not be trusted until
   checked.
+- **The US scam catalogue is new and needs a closer review** against current
+  FTC/FBI guidance before being fully trusted. Only English is available for
+  the US; Spanish is not yet built.
 - **Push delivery is not guaranteed to a device that is fully offline.** A
   closed phone only receives a queued alert if it reconnects within about two
   minutes.
