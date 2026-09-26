@@ -105,6 +105,25 @@ if _fernet is None:
           'python -c "from cryptography.fernet import Fernet; '
           'print(Fernet.generate_key().decode())"  and set KINGUARD_DB_KEY.')
 
+# Gmail SMTP for password-reset emails, via an app password (not the account
+# password). Free-tier PythonAnywhere allows outbound SMTP to Gmail only, as
+# a firewall exception, not the paid-tier unrestricted internet.
+SMTP_USER = os.environ.get("KINGUARD_SMTP_USER", "").strip()
+SMTP_PASS = os.environ.get("KINGUARD_SMTP_PASS", "").strip()
+if not (SMTP_USER and SMTP_PASS):
+    print("[KinGuard] No KINGUARD_SMTP_USER/KINGUARD_SMTP_PASS set — password "
+          "reset emails will not send. Set an app password from the Gmail "
+          "account's security settings, not its login password.")
+
+# Base URL for links sent in emails (password reset). NOT built from
+# request.host_url — trusting an incoming Host header to construct a link
+# that then gets emailed out is a spoofing vector, so this is explicit
+# instead.
+BASE_URL = os.environ.get("KINGUARD_BASE_URL", "http://127.0.0.1:5000").strip().rstrip("/")
+if not os.environ.get("KINGUARD_BASE_URL", "").strip():
+    print("[KinGuard] No KINGUARD_BASE_URL set — using %r. Set this in "
+          "production or password-reset email links will point at the "
+          "wrong host." % BASE_URL)
 
 def enc_phone(plaintext):
     """Encrypt a phone number for storage; blank stays blank."""
@@ -278,8 +297,19 @@ def init_db():
                    created_at INTEGER NOT NULL,
                    revoked_at INTEGER
                )"""
-        )
+        )   
 
+        # --- password resets: single-use, hashed, time-limited tokens ---
+        con.execute(
+            """CREATE TABLE IF NOT EXISTS password_resets (
+                   id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                   account_id INTEGER NOT NULL,
+                   token_hash TEXT UNIQUE NOT NULL,
+                   created_at INTEGER NOT NULL,
+                   expires_at INTEGER NOT NULL,
+                   used_at    INTEGER
+               )"""
+        )
         # --- push subscriptions: tagged with the pair they belong to ---
         con.execute(
             """CREATE TABLE IF NOT EXISTS push_subs (
@@ -512,6 +542,33 @@ if _PUSH_LIB and VAPID_PUBLIC and VAPID_PRIVATE:
 PUSH_ENABLED = VAPID_SIGNER is not None
 
 
+def send_reset_email(to_addr, reset_url):
+    """Send a password-reset link by Gmail SMTP. Never raises; returns whether
+    it actually sent, which the caller must NOT reveal to an unauthenticated
+    caller (that would leak whether an email is registered)."""
+    if not (SMTP_USER and SMTP_PASS):
+        return False
+    import smtplib
+    from email.message import EmailMessage
+    msg = EmailMessage()
+    msg["Subject"] = "Reset your KinGuard password"
+    msg["From"] = SMTP_USER
+    msg["To"] = to_addr
+    msg.set_content(
+        "Someone asked to reset the password on this KinGuard account.\n\n"
+        "If this was you, open this link within 30 minutes:\n" + reset_url +
+        "\n\nIf it wasn't you, ignore this email and nothing will change."
+    )
+    try:
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=10) as s:
+            s.login(SMTP_USER, SMTP_PASS)
+            s.send_message(msg)
+        return True
+    except Exception as e:
+        print("[KinGuard] reset email failed for %s: %r" % (to_addr, e))
+        return False
+
+
 def send_push(pair, rule):
     """Send Web Push to this pair's family devices. Never raises."""
     if not PUSH_ENABLED:
@@ -588,6 +645,20 @@ def register_page():
     if current_account():
         return redirect("/family")
     return render_template("register.html")
+
+
+@app.route("/forgot-password")
+def forgot_password_page():
+    if current_account():
+        return redirect("/family")
+    return render_template("forgot-password.html")
+
+
+@app.route("/reset-password")
+def reset_password_page():
+    if current_account():
+        return redirect("/family")
+    return render_template("reset-password.html")
 
 
 @app.route("/setup")
@@ -775,6 +846,63 @@ def api_register():
     return jsonify(ok=True)
 
 
+@app.route("/api/forgot-password", methods=["POST"])
+def api_forgot_password():
+    # Rate-limited the same way registration is: the attempt is recorded
+    # regardless of outcome, since every request here "succeeds" from the
+    # caller's point of view (same generic response either way), so a
+    # failure-only counter would never fire once.
+    key = _client_key()
+    if not rate_allowed(key):
+        return jsonify(error="Too many attempts. Please wait a few minutes."), 429
+    rate_record(key)
+    data = request.get_json(force=True, silent=True) or {}
+    email = _norm_email(data.get("email"))
+    with closing(get_db()) as con, con:
+        row = con.execute("SELECT id FROM accounts WHERE email=?", (email,)).fetchone()
+        if row:
+            tok = new_token()
+            now = int(time.time())
+            con.execute(
+                "INSERT INTO password_resets (account_id, token_hash, created_at, expires_at) "
+                "VALUES (?,?,?,?)",
+                (row["id"], hash_token(tok), now, now + 1800))
+            reset_url = BASE_URL + "/reset-password?token=" + tok
+            threading.Thread(target=send_reset_email, args=(email, reset_url),
+                              daemon=True).start()
+    # Same response whether or not the email is registered, so this endpoint
+    # cannot be used to enumerate accounts.
+    return jsonify(ok=True)
+
+
+@app.route("/api/reset-password", methods=["POST"])
+def api_reset_password():
+    key = _client_key()
+    if not rate_allowed(key):
+        return jsonify(error="Too many attempts. Please wait a few minutes."), 429
+    rate_record(key)
+    data = request.get_json(force=True, silent=True) or {}
+    tok = clean_token(data.get("token"))
+    pw = data.get("password") or ""
+    if len(pw) < MIN_PASSWORD_LEN:
+        return jsonify(error="Password must be at least %d characters." % MIN_PASSWORD_LEN), 400
+    if not tok:
+        return jsonify(error="This link is invalid or has expired."), 400
+    now = int(time.time())
+    with closing(get_db()) as con, con:
+        row = con.execute(
+            "SELECT id, account_id FROM password_resets "
+            "WHERE token_hash=? AND used_at IS NULL AND expires_at>?",
+            (hash_token(tok), now)).fetchone()
+        if not row:
+            return jsonify(error="This link is invalid or has expired."), 400
+        con.execute(
+            "UPDATE accounts SET password_hash=?, session_version=session_version+1 WHERE id=?",
+            (generate_password_hash(pw), row["account_id"]))
+        con.execute("UPDATE password_resets SET used_at=? WHERE id=?", (now, row["id"]))
+    return jsonify(ok=True)
+
+
 @app.route("/api/login", methods=["POST"])
 def api_login():
     key = _client_key()
@@ -957,28 +1085,7 @@ def senior_config():
 
 
 @app.route("/api/alert", methods=["POST"])
-def create_alert():
-    # Authenticated by the senior device cookie (SameSite=Lax, so it is not sent
-    # on cross-site POSTs, no CSRF token needed).
-    pair = device_pair()
-    if not pair:
-        return jsonify(error="not linked"), 401
-    data = request.get_json(force=True, silent=True) or {}
-    rule = data.get("rule")
-    if rule not in VALID_RULES:
-        return jsonify(error="unknown rule"), 400
-    now = int(time.time())
-    with closing(get_db()) as con, con:
-        con.execute(
-            "UPDATE alerts SET status='resolved', resolved_at=? WHERE pair=? AND status='active'",
-            (now, pair))
-        cur = con.execute(
-            "INSERT INTO alerts (pair, rule, created_at, status) VALUES (?, ?, ?, 'active')",
-            (pair, rule, now))
-        alert_id = cur.lastrowid
-    if PUSH_ENABLED:
-        threading.Thread(target=send_push, args=(pair, rule), daemon=True).start()
-    return jsonify(id=alert_id, rule=rule)
+
 
 
 # ---------- alert API (family, owner-only) ----------

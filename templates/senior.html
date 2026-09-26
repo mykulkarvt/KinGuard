@@ -166,7 +166,7 @@ function verdictHTML(id,isPanic){
       <button class="listen" id="listenBtn" onclick="speak('${id}')">${U.listen}</button>
       <button class="back" onclick="goHome()">${U.back}</button>`;
   }
-  return `<div class="verdict" role="alert"><span class="vic" aria-hidden="true">🛑</span>
+    return `<div class="verdict" role="alert"><span class="vic" aria-hidden="true">🛑</span>
       <span><div class="vt">${U.fraudTitle}</div><div class="vw">${r.why}</div></span></div>
     <div class="steps">
       <div class="step"><span class="sic" aria-hidden="true">📵</span><span class="stx">${U.hangup}</span></div>
