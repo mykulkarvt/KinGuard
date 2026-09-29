@@ -246,8 +246,14 @@ async function save(){
     const res = await fetch('/api/settings',{method:'POST',headers:{'Content-Type':'application/json','X-CSRF-Token':csrfHeader()},body:JSON.stringify(body)});
     if(res.status===401){ location.href='/login'; return; }
     const out = await res.json().catch(()=>({}));
-    if(res.status===400){
-      document.getElementById('msg').innerHTML = `<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">Senior's phone number is required — it links the two phones.</div>`;
+       if(res.status===400){
+      const msgs = {
+        'senior phone required': "Senior's phone number is required — it links the two phones.",
+        'senior phone invalid': "Senior's phone number doesn't look right — check the digits and try again.",
+        'family phone invalid': "Family phone number doesn't look right — check the digits and try again."
+      };
+      const text = msgs[out.error] || "Senior's phone number is required — it links the two phones.";
+      document.getElementById('msg').innerHTML = `<div style="color:#C0392B;font-weight:700;margin-top:14px;text-align:center">${text}</div>`;
       return;
     }
     if(!res.ok || !out.pair) throw new Error('save failed');

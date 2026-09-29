@@ -165,6 +165,19 @@ def _clean_phone(value):
     return s.strip()[:MAX_PHONE_LEN]
 
 
+def valid_phone(value, country):
+    """India: 10 digits, allowing a leading 0 or +91/91 country code. Other
+    countries have no format check yet (deferred to the US module)."""
+    if country != "IN":
+        return True
+    digits = "".join(ch for ch in value if ch.isdigit())
+    if digits[:2] == "91" and len(digits) == 12:
+        digits = digits[2:]
+    elif digits[:1] == "0" and len(digits) == 11:
+        digits = digits[1:]
+    return len(digits) == 10 and digits[0] in "6789"
+
+
 def norm_pair(value):
     """Legacy helper: reduce a phone number to digits. Only used by the very old
     single-row DB migration below; pairs are random tokens now."""
@@ -996,9 +1009,16 @@ def get_settings():
 @api_login_required
 def save_settings():
     data = request.get_json(force=True, silent=True) or {}
+    country = data.get("country")
+    country = country if country in ALLOWED_COUNTRIES else DEFAULT_COUNTRY
     senior_phone = _clean_phone(data.get("senior_phone"))
     if not senior_phone:
         return jsonify(error="senior phone required"), 400
+    if not valid_phone(senior_phone, country):
+        return jsonify(error="senior phone invalid"), 400
+    family_phone = _clean_phone(data.get("family_phone"))
+    if family_phone and not valid_phone(family_phone, country):
+        return jsonify(error="family phone invalid"), 400
     raw_conds = data.get("conditions")
     raw_conds = raw_conds if isinstance(raw_conds, list) else []
     conds = list(dict.fromkeys(c for c in raw_conds if c in ALLOWED_CONDITIONS))
@@ -1010,8 +1030,6 @@ def save_settings():
     simple_mode = 1 if "memory" in cset else 0
     lang = data.get("lang")
     lang = lang if lang in ALLOWED_LANGS else DEFAULT_LANG
-    country = data.get("country")
-    country = country if country in ALLOWED_COUNTRIES else DEFAULT_COUNTRY
     aid = g.account["id"]
     with closing(get_db()) as con, con:
         # Edit an existing pair only if this account owns it; otherwise create a
