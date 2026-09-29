@@ -40,7 +40,8 @@ helpline, or, for a US family, to the AARP Fraud Watch helpline plus the FTC
 and FBI's online reporting, since the US has no single 24-hour number.
 
 The family member does a five minute setup once, then sends the elder a private
-link. That link pairs the elder's phone for good.
+link. That link pairs the elder's phone for good. One family account can look
+after more than one elder and switch between them.
 
 ## Languages
 
@@ -60,6 +61,16 @@ vary by country, not by language, so they are kept as a separate table.
 Adding a country means one entry in the `COUNTRIES` table in
 `static/rules.js` plus the matching scam catalogue.
 
+**United States.** The US catalogue maps each of the five scams to its
+documented US equivalent: government impersonation, the FBI's "phantom hacker"
+scam, the grandparent scam, phishing by text message, and a sweepstakes scam.
+The guidance is in English. The US has no single 24-hour scam helpline like
+India's 1930, so the report action is a set of options: the AARP Fraud Watch
+Network Helpline (877-908-3360, Monday to Friday, 8am to 8pm Eastern, open to
+anyone), plus the FTC's reportfraud.ftc.gov and the FBI's ic3.gov, which work
+at any hour. 911 is for something happening right now. Pairs made before
+country support existed default to India, so nothing changed for them.
+
 ## Accessibility
 
 During setup the family member ticks what the elder finds difficult. The
@@ -76,6 +87,10 @@ elder's phone then opens that way by itself, with nothing for them to configure.
 
 - Both phone numbers are **encrypted before being stored**, using Fernet.
 - Passwords are stored only as a hash.
+- **Password reset** is by emailed link. The link works once, expires after 30
+  minutes, and is stored only as a hash. The reply is the same whether or not
+  the email is registered, so it cannot be used to find out who has an account.
+  A reset logs out every other session.
 - Every pair of phones is **owned by one account**, and every settings and
   alert endpoint checks that ownership, so no account can read another
   family's data.
@@ -107,6 +122,8 @@ restart and stored phone numbers become unreadable.
 | `VAPID_PUBLIC` / `VAPID_PRIVATE` | Web Push keys, from `gen_vapid.py` |
 | `VAPID_SUBJECT` | Contact address for the push service |
 | `KINGUARD_ADMIN_EMAIL` | Which account may see `/stats` |
+| `KINGUARD_SMTP_USER` / `KINGUARD_SMTP_PASS` | Gmail address and app password used to send password reset emails |
+| `KINGUARD_BASE_URL` | Public address of the site, used to build the link in reset emails |
 
 Rotating `KINGUARD_DB_KEY` makes every stored phone number permanently
 unreadable, and changing the VAPID keys invalidates every existing
@@ -143,11 +160,14 @@ matter.
 
 ## Honest limitations
 
-- **There is no password reset.** A family member who forgets their password is
-  locked out, and because deletion re-checks the password, they cannot delete
-  their account either. The host's free tier blocks outbound mail, so this
-  needs either a paid tier or a recovery code at signup. It is the biggest
-  outstanding gap.
+- **Password reset emails can land in spam.** They are sent through a free
+  Gmail account with little sending history, so some mail providers file them
+  as spam, and the reset page does not yet tell the user to check there.
+  Sending also relies on the host's Gmail exception, which is best effort on
+  the free tier.
+- **Phone numbers are only checked for India.** An Indian number is validated
+  when setup is saved. A US number is not, so a typo would silently break the
+  call button.
 - **Alerts when closed have to be switched on per family.** Until someone taps
   that button, an alert raised while the app is shut reaches nobody. The app
   looks like it is working and is not.
@@ -167,7 +187,8 @@ matter.
 
 ## Possible next steps
 
-- A recovery code issued at signup, so a locked-out user can get back in
+- A spam-folder hint and a proper sender name on password reset emails
+- Phone number validation for the United States
 - A practice alert, so a family can see the whole loop work before a real one
 - A pairing code, so the elder's phone can be set up without sending a link
 - SMS fallback for alerts when there is no internet
