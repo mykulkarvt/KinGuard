@@ -33,6 +33,7 @@ let U=UI.en, R=RULES[DEFAULT_COUNTRY].en, C=COUNTRIES[DEFAULT_COUNTRY];
 // This account's pair + CSRF token are loaded from /api/me at boot. CSRF is
 // seeded from the page so it's available even before that call returns.
 let PAIR='';
+let MYPAIRS=[]; 
 let CSRF=(document.querySelector('meta[name="csrf-token"]')||{}).content||'';
 function api(path){ return path + (path.indexOf('?')>=0?'&':'?') + 'pair=' + encodeURIComponent(PAIR); }
 function logout(){ fetch('/api/logout',{method:'POST',headers:{'X-CSRF-Token':CSRF}}).finally(()=>{location.href='/login';}); }
@@ -62,7 +63,14 @@ async function loadCfg(){
   document.title='KinGuard — '+(cfg.family_name||'')+U.possPhone;
   const tag=document.getElementById('tag'); if(tag) tag.textContent=U.famTag;
   const foot=document.getElementById('foot');
-  if(foot) foot.innerHTML=esc(U.footFamily)+' · <a href="/setup?id='+encodeURIComponent(PAIR)+'" style="color:#0F6B5C;font-weight:700">⚙ Edit</a> · <a href="#" onclick="logout();return false" style="color:#0F6B5C;font-weight:700">Log out</a>';
+  if(foot){
+    let sw='';
+    if(MYPAIRS.length>1){
+      const opts=MYPAIRS.map(p=>`<option value="${esc(p.pair)}"${p.pair===PAIR?' selected':''}>${esc(p.senior_name||'(unnamed)')}</option>`).join('');
+      sw=`<select onchange="location.href='/family?pair='+encodeURIComponent(this.value)" style="margin-bottom:8px;font-weight:700">${opts}</select><br>`;
+    }
+    foot.innerHTML=sw+esc(U.footFamily)+' · <a href="/setup?id='+encodeURIComponent(PAIR)+'" style="color:#0F6B5C;font-weight:700">⚙ Edit</a> · <a href="#" onclick="logout();return false" style="color:#0F6B5C;font-weight:700">Log out</a>';
+  }
 }
 
 // ---- Web Push: let the family be alerted even when this app is closed ----
@@ -304,7 +312,11 @@ function done_(){alertObj=null;aView='lock';render();}
     if(r.status===401){ location.href='/login'; return; }
     const me=await r.json();
     CSRF=me.csrf||CSRF;
-    if(me.pairs && me.pairs.length){ PAIR=me.pairs[0].pair; }
+      MYPAIRS=me.pairs||[];
+    const wanted=new URLSearchParams(location.search).get('pair');
+    const match=MYPAIRS.find(p=>p.pair===wanted);
+    if(match){ PAIR=match.pair; }
+    else if(MYPAIRS.length){ PAIR=MYPAIRS[0].pair; }
   }catch(e){}
   // Before the no-pair early return below: someone who has registered but not
   // finished setup is still a family on an iPhone, and is exactly the person
