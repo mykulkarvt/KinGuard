@@ -1103,6 +1103,28 @@ def senior_config():
 
 
 @app.route("/api/alert", methods=["POST"])
+def create_alert():
+    # Authenticated by the senior device cookie (SameSite=Lax, so it is not sent
+    # on cross-site POSTs, no CSRF token needed).
+    pair = device_pair()
+    if not pair:
+        return jsonify(error="not linked"), 401
+    data = request.get_json(force=True, silent=True) or {}
+    rule = data.get("rule")
+    if rule not in VALID_RULES:
+        return jsonify(error="unknown rule"), 400
+    now = int(time.time())
+    with closing(get_db()) as con, con:
+        con.execute(
+            "UPDATE alerts SET status='resolved', resolved_at=? WHERE pair=? AND status='active'",
+            (now, pair))
+        cur = con.execute(
+            "INSERT INTO alerts (pair, rule, created_at, status) VALUES (?, ?, ?, 'active')",
+            (pair, rule, now))
+        alert_id = cur.lastrowid
+    if PUSH_ENABLED:
+        threading.Thread(target=send_push, args=(pair, rule), daemon=True).start()
+    return jsonify(id=alert_id, rule=rule)
 
 
 
